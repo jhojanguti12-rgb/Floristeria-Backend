@@ -11,7 +11,7 @@ const verificarToken = require('./middlewares/authMiddleware');
 const flowerRouter = require('./routers/flowerRouter');
 const pedidoRouter = require('./routers/pedidoRouter');
 const clienteRouter = require('./routers/ClienteRouter');
-const usuarioRouter = require('./routers/usuarioRouter');
+const usuarioRouter = require('./routers/UsuarioRouter');
 const pagoRouter = require('./routers/pagoRouter');
 const categoriaRouter = require('./routers/categoriaRouter');
 const entregaRouter = require('./routers/entregaRouter');
@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
 });
 
 // --- 3. RUTAS PÚBLICAS ---
-app.use('/api/usuarios', usuarioRouter); 
+app.use('/api/usuarios', UsuarioRouter); 
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
 

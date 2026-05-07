@@ -10,7 +10,7 @@ const verificarToken = require('./middlewares/authMiddleware');
 // Importación de Routers
 const flowerRouter = require('./routers/flowerRouter');
 const pedidoRouter = require('./routers/pedidoRouter');
-const clienteRouter = require('./routers/clienteRouter');
+const clienteRouter = require('./routers/ClienteRouter');
 const usuarioRouter = require('./routers/usuarioRouter');
 const pagoRouter = require('./routers/pagoRouter');
 const categoriaRouter = require('./routers/categoriaRouter');

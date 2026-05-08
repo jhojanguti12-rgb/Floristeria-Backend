@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
 });
 
 // --- 3. RUTAS PÚBLICAS ---
-app.use('/api/usuarios', UsuarioRouter); 
+app.use('/api/usuarios', usuarioRouter); 
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
 

@@ -23,7 +23,7 @@ const app = express();
 // --- 1. Middlewares Globales ---
 app.use(helmet({
     crossOriginResourcePolicy: false, 
-    contentSecurityPolicy: false, // Desactivado para evitar bloqueos con el frontend de Vite
+    contentSecurityPolicy: false, 
 }));
 
 app.use(cors({
@@ -36,9 +36,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- 2. Servir archivos estáticos (Imágenes y Frontend) ---
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Subimos un nivel para llegar a la raíz
-app.use(express.static(path.join(__dirname, '../public'))); // Esta es la carpeta que renombraste
+// --- 2. Servir archivos estáticos ---
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // --- 3. RUTAS DE LA API ---
 app.use('/api/usuarios', usuarioRouter); 
@@ -54,10 +54,11 @@ app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
 // --- 4. CONFIGURACIÓN PARA EL FRONTEND (VITE) ---
-/** * IMPORTANTE: Esta ruta debe ir después de todas las rutas de /api.
- * Sirve el index.html para cualquier ruta que no sea una API.
+/** * SOLUCIÓN AL ERROR DE RENDER:
+ * Usamos una Regex que dice: "Si la ruta NO empieza con /api, sirve el index.html"
+ * Esto evita el error de PathError [TypeError]: Missing parameter name
  */
-app.get('(.*)', (req, res) => {
+app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 

@@ -3,7 +3,8 @@ const router = express.Router();
 const usuarioService = require('../services/usuarioService');
 const verificarToken = require('../middlewares/authMiddleware');
 
-// 1. Ruta para REGISTRAR (Temporalmente permite cualquier rol para crear el primer Admin)
+// 1. Ruta para REGISTRAR CLIENTES (Público)
+// Volvemos a forzar el rol 'cliente' por seguridad
 router.post('/registro', async (req, res) => {
     console.log("📩 Solicitud de REGISTRO recibida para:", req.body?.email);
     try {
@@ -11,19 +12,18 @@ router.post('/registro', async (req, res) => {
             return res.status(400).json({ error: "No se enviaron datos" });
         }
 
-        const { email, password, nombre } = req.body;
-        if (!email || !password || !nombre) {
-            return res.status(400).json({ error: "Nombre, email y contraseña son obligatorios" });
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: "Email y contraseña obligatorios" });
         }
 
-        // --- CAMBIO EN LÍNEA 17 ---
-        // Quitamos el forzado de 'cliente' para poder crear el Admin inicial desde Postman
-        const datosUsuario = { ...req.body }; 
+        // --- RESTAURADO: Seguridad activada ---
+        const datosUsuario = { ...req.body, rol: 'cliente' };
         
         const resultado = await usuarioService.createUsuario(datosUsuario);
         
         return res.status(201).json({ 
-            mensaje: "✅ Usuario registrado correctamente", 
+            mensaje: "✅ Cliente registrado correctamente", 
             id: resultado.insertId 
         });
     } catch (error) {

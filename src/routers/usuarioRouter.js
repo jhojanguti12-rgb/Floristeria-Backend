@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const usuarioService = require('../services/usuarioService');
-const verificarToken = require('../middlewares/authMiddleware'); // Asegúrate de tener este middleware
+const verificarToken = require('../middlewares/authMiddleware');
 
-// 1. Ruta para REGISTRAR CLIENTES (Público)
+// 1. Ruta para REGISTRAR (Temporalmente permite cualquier rol para crear el primer Admin)
 router.post('/registro', async (req, res) => {
     console.log("📩 Solicitud de REGISTRO recibida para:", req.body?.email);
     try {
@@ -11,17 +11,19 @@ router.post('/registro', async (req, res) => {
             return res.status(400).json({ error: "No se enviaron datos" });
         }
 
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: "Email y contraseña obligatorios" });
+        const { email, password, nombre } = req.body;
+        if (!email || !password || !nombre) {
+            return res.status(400).json({ error: "Nombre, email y contraseña son obligatorios" });
         }
 
-        // Forzamos el rol 'cliente' para registros públicos por seguridad
-        const datosUsuario = { ...req.body, rol: 'cliente' };
+        // --- CAMBIO EN LÍNEA 17 ---
+        // Quitamos el forzado de 'cliente' para poder crear el Admin inicial desde Postman
+        const datosUsuario = { ...req.body }; 
+        
         const resultado = await usuarioService.createUsuario(datosUsuario);
         
         return res.status(201).json({ 
-            mensaje: "✅ Cliente registrado correctamente", 
+            mensaje: "✅ Usuario registrado correctamente", 
             id: resultado.insertId 
         });
     } catch (error) {
@@ -33,9 +35,7 @@ router.post('/registro', async (req, res) => {
 });
 
 // 2. Ruta para que el ADMIN cree PERSONAL (Protegida)
-// Solo accesible si el Admin está logueado
 router.post('/crear-personal', verificarToken, async (req, res) => {
-    // Verificamos que quien hace la petición sea ADMIN
     if (req.usuario.rol !== 'admin') {
         return res.status(403).json({ error: "Acceso denegado. Solo administradores pueden crear personal." });
     }
@@ -49,7 +49,6 @@ router.post('/crear-personal', verificarToken, async (req, res) => {
             return res.status(400).json({ error: "Todos los campos son obligatorios (incluyendo el rol)" });
         }
 
-        // Aquí el Service se encargará de encriptar la contraseña
         const resultado = await usuarioService.createUsuario(req.body);
         
         return res.status(201).json({ 
@@ -71,7 +70,6 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: "Debes proporcionar email y contraseña" });
         }
         
-        // El service debe retornar { token, rol, nombre }
         const resultado = await usuarioService.login(email, password);
         
         return res.status(200).json({ 

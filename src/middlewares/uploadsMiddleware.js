@@ -1,53 +1,57 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
-// 1. Configuramos el "almacén" (dónde y con qué nombre se guardan)
+// ASEGURAR QUE LA CARPETA EXISTE: Para evitar errores en Render si la carpeta se borra
+const uploadDir = 'uploads/';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Esta es la carpeta que ya tienes en la raíz según tu captura
-        cb(null, 'uploads/'); 
+        cb(null, uploadDir); 
     },
     filename: (req, file, cb) => {
-        // Nombre único para evitar que una imagen "Rosa.jpg" borre a otra "Rosa.jpg"
+        // Limpiamos el nombre original de espacios para evitar problemas en URLs
+        const name = file.originalname.split(' ').join('_');
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        cb(null, uniqueSuffix + '-' + name);
     }
 });
 
-// 2. Filtro de seguridad (Solo imágenes para proteger tu servidor)
 const fileFilter = (req, file, cb) => {
-    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    // Aceptamos más mimetypes por si las moscas
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
     
     if (tiposPermitidos.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        // Enviamos un error claro si intentan subir un PDF o ejecutable
         cb(new Error('Formato no permitido. Solo se aceptan imágenes (jpg, png, webp).'), false);
     }
 };
 
-// 3. Creamos el cargador con límite de 5MB
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 1024 * 1024 * 5 } 
+    limits: { 
+        fileSize: 1024 * 1024 * 10, // Aumentado a 10MB para mayor seguridad
+        files: 1 // Solo una imagen por producto
+    } 
 });
 
-// NUEVA FUNCIÓN: Middleware de manejo de errores específico para Multer
-// Esto evita que el servidor se caiga si el archivo es muy pesado o el formato es incorrecto
 const uploadWithErrorHandler = (req, res, next) => {
-    // 'imagen' es el nombre que debe llevar el campo en el FormData del Frontend
     const uploadSingle = upload.single('imagen');
 
     uploadSingle(req, res, (err) => {
         if (err instanceof multer.MulterError) {
-            // Errores de Multer (ej. archivo muy grande)
-            return res.status(400).json({ mensaje: `Error de carga: ${err.message}` });
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ mensaje: "La imagen es muy pesada. Máximo 10MB." });
+            }
+            return res.status(400).json({ mensaje: `Error de Multer: ${err.message}` });
         } else if (err) {
-            // Errores de nuestro filtro de seguridad
             return res.status(400).json({ mensaje: err.message });
         }
-        // Si todo va bien, pasamos al controlador
         next();
     });
 };

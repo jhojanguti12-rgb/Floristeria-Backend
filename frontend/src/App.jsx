@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-// --- CONFIGURACIÓN DE API ---
-const API_BASE_URL = 'http://localhost:4000/api';
+// --- CONFIGURACIÓN DE API CORREGIDA ---
+const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
 const api = {
   get: async (endpoint) => {
@@ -22,7 +22,6 @@ const api = {
     return data;
   },
   patch: async (endpoint, body) => {
-    // Obtenemos el token para las peticiones PATCH de estado
     const user = JSON.parse(window.sessionStorage.getItem('user'));
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PATCH',
@@ -77,7 +76,6 @@ const ModalProducto = ({ alCerrar, alGuardar }) => {
     setEnviando(true);
     
     const formData = new FormData();
-    // Importante: Convertir a los tipos que espera MySQL
     formData.append('nombre', datos.nombre);
     formData.append('precio', parseFloat(datos.precio));
     formData.append('stock', parseInt(datos.stock));
@@ -85,7 +83,7 @@ const ModalProducto = ({ alCerrar, alGuardar }) => {
     formData.append('color', datos.color);
     
     if (foto) {
-      formData.append('imagen', foto); // Debe coincidir con upload.single('imagen') en el backend
+      formData.append('imagen', foto);
     }
 
     try {
@@ -142,7 +140,7 @@ const ModalProducto = ({ alCerrar, alGuardar }) => {
   );
 };
 
-// --- MODAL PERSONAL (MANTENIDO) ---
+// --- MODAL PERSONAL ---
 const FormularioPersonal = ({ alCerrar, alGuardar }) => {
   const [datos, setDatos] = useState({ nombre: '', email: '', password: '', rol: 'empleado' });
   const [enviando, setEnviando] = useState(false);
@@ -336,8 +334,9 @@ export default function App() {
                       {data.map(f => (
                         <tr key={f.id} className={`border-b hover:bg-gray-50 transition-all ${!f.activo ? 'opacity-40 grayscale' : ''}`}>
                           <td className="p-3">
+                            {/* URL DE IMAGEN CORREGIDA */}
                             <img 
-                              src={f.imagen_url ? `http://localhost:4000${f.imagen_url}` : '/logo192.png'} 
+                              src={f.imagen_url ? `https://floristeria-api-v2.onrender.com${f.imagen_url}` : '/logo192.png'} 
                               className="w-12 h-12 rounded-2xl object-cover shadow-sm bg-gray-100" 
                               alt="flor"
                               onError={(e) => e.target.src = '/logo192.png'}

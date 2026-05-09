@@ -57,7 +57,7 @@ app.use('/api/proveedores', verificarToken, proveedorRouter);
 /** * IMPORTANTE: Esta ruta debe ir después de todas las rutas de /api.
  * Sirve el index.html para cualquier ruta que no sea una API.
  */
-app.get('*', (req, res) => {
+app.get('(.*)', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 

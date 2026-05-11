@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+// IMPORTANTE: Asegúrate de instalar recharts en el frontend (npm install recharts)
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 // --- CONFIGURACIÓN DE API CORREGIDA ---
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
@@ -43,7 +45,43 @@ const api = {
   }
 };
 
-// --- COMPONENTES ATÓMICOS ---
+// --- COMPONENTES DE DISEÑO NUEVOS (DASHBOARD) ---
+const StatCard = ({ title, value, growth, icon, color, bg }) => (
+  <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:scale-105">
+    <div className={`${bg} ${color} w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner`}>
+      <i className={`bi ${icon}`}></i>
+    </div>
+    <div>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{title}</p>
+      <div className="flex items-baseline gap-2">
+        <h4 className="text-2xl font-black text-gray-800 tracking-tighter">{value}</h4>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${growth.includes('+') ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+          {growth}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
+const RecentOrder = ({ id, customer, status, price, statusColor }) => (
+  <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-all border-b border-gray-50 last:border-0">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+        <i className="bi bi-person-fill"></i>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">{id}</p>
+        <p className="text-sm font-black text-gray-700">{customer}</p>
+      </div>
+    </div>
+    <div className="text-right">
+      <p className="text-sm font-black text-gray-800">{price}</p>
+      <span className={`${statusColor} text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter`}>{status}</span>
+    </div>
+  </div>
+);
+
+// --- COMPONENTES ATÓMICOS ORIGINALES ---
 const InputEstilizado = ({ type = "text", placeholder, value, onChange, icon }) => (
   <div className="relative w-full">
     {icon && <i className={`bi ${icon} absolute left-4 top-1/2 -translate-y-1/2 text-gray-400`}></i>}
@@ -58,7 +96,7 @@ const InputEstilizado = ({ type = "text", placeholder, value, onChange, icon }) 
   </div>
 );
 
-// --- MODAL DE PRODUCTOS ---
+// --- MODAL DE PRODUCTOS ORIGINAL ---
 const ModalProducto = ({ alCerrar, alGuardar }) => {
   const [datos, setDatos] = useState({ nombre: '', precio: '', stock: '', id_categoria: '', color: '' });
   const [foto, setFoto] = useState(null);
@@ -140,7 +178,7 @@ const ModalProducto = ({ alCerrar, alGuardar }) => {
   );
 };
 
-// --- MODAL PERSONAL ---
+// --- MODAL PERSONAL ORIGINAL ---
 const FormularioPersonal = ({ alCerrar, alGuardar }) => {
   const [datos, setDatos] = useState({ nombre: '', email: '', password: '', rol: 'empleado' });
   const [enviando, setEnviando] = useState(false);
@@ -258,9 +296,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] flex font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] flex font-sans overflow-hidden">
       {/* SIDEBAR */}
-      <aside className="w-80 bg-[#2d6a4f] text-white p-8 flex flex-col shadow-2xl z-20">
+      <aside className="w-80 bg-[#1b4332] text-white p-8 flex flex-col shadow-2xl z-20">
         <div className="mb-12">
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">FLORISTERÍA</h1>
           <div className="h-1 w-12 bg-pink-400 mt-1 rounded-full"></div>
@@ -286,20 +324,78 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 relative flex items-start justify-center p-10 bg-center bg-cover overflow-y-auto" style={{backgroundImage: 'url("/fondo-jardin.jpg")', backgroundBlendMode: 'soft-light', backgroundColor: 'rgba(248, 250, 249, 0.95)'}}>
-        <div className="relative z-10 w-full flex flex-col items-center">
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 overflow-y-auto p-10 bg-gray-50/50">
+        <div className="w-full max-w-7xl mx-auto">
           
+          {/* NUEVA SECCIÓN DE INICIO (DASHBOARD) */}
           {seccion === 'inicio' && (
-            <div className="bg-white/40 mt-20 backdrop-blur-md p-20 rounded-[5rem] shadow-2xl text-center border border-white animate-in zoom-in duration-500">
-              <span className="text-8xl block mb-6">✨</span>
-              <h1 className="text-7xl font-black text-[#2d6a4f] uppercase tracking-tighter italic">¡Hola, {user.nombre.split(' ')[0]}!</h1>
-              <p className="text-[#d81b60] font-black mt-6 tracking-[0.3em] uppercase text-sm">Panel de Gestión Floreciente</p>
+            <div className="animate-in fade-in zoom-in duration-500 space-y-8">
+              <header className="flex justify-between items-end">
+                <div>
+                  <h1 className="text-4xl font-black text-[#2d6a4f] tracking-tighter">¡Bienvenido, {user.nombre.split(' ')[0]}! 👋</h1>
+                  <p className="text-gray-400 font-bold text-sm">Aquí tienes un resumen general de tu floristería.</p>
+                </div>
+                <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border text-sm font-bold text-gray-500">
+                  <i className="bi bi-calendar3 mr-2 text-pink-500"></i> {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Pedidos Totales" value="128" growth="+12%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
+                <StatCard title="Ventas Totales" value="$2,450" growth="+18%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" />
+                <StatCard title="En Inventario" value={data.length || "0"} growth="-5%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
+                <StatCard title="Personal" value="8" growth="Estable" icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter">Ventas de los últimos 7 días</h3>
+                    <select className="bg-gray-50 border-none text-xs font-bold rounded-xl p-2 text-gray-500 outline-none cursor-pointer">
+                      <option>Últimos 7 días</option>
+                    </select>
+                  </div>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={[
+                        { d: '11 Jun', v: 400 }, { d: '12 Jun', v: 300 }, { d: '13 Jun', v: 600 },
+                        { d: '14 Jun', v: 500 }, { d: '15 Jun', v: 380 }, { d: '16 Jun', v: 720 }, { d: '17 Jun', v: 400 }
+                      ]}>
+                        <defs>
+                          <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
+                        <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                        <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter text-sm">Pedidos recientes</h3>
+                    <button className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
+                  </div>
+                  <div className="space-y-2">
+                    <RecentOrder id="#PED-000128" customer="María González" status="Entregado" price="$85.00" statusColor="bg-green-100 text-green-700" />
+                    <RecentOrder id="#PED-000127" customer="Carlos Ramírez" status="En proceso" price="$120.00" statusColor="bg-orange-100 text-orange-700" />
+                    <RecentOrder id="#PED-000126" customer="Ana Martínez" status="Pendiente" price="$65.00" statusColor="bg-blue-100 text-blue-700" />
+                    <RecentOrder id="#PED-000125" customer="Luis Torres" status="Entregado" price="$90.00" statusColor="bg-green-100 text-green-700" />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* SECCIÓN PERSONAL ORIGINAL */}
           {seccion === 'personal' && (
-            <div className="flex flex-col items-center gap-8 w-full max-w-5xl">
+            <div className="flex flex-col items-center gap-8 w-full max-w-5xl mx-auto">
               <div className="bg-white/80 backdrop-blur-md p-8 rounded-[3rem] shadow-xl w-full border border-white/50">
                 <h2 className="text-3xl font-black text-[#2d6a4f] uppercase italic mb-6">Equipo de Trabajo</h2>
                 <div className="overflow-hidden rounded-3xl border bg-white">
@@ -318,8 +414,9 @@ export default function App() {
             </div>
           )}
 
+          {/* SECCIÓN INVENTARIO ORIGINAL */}
           {seccion === 'inventario' && (
-            <div className="flex flex-col items-center gap-8 w-full max-w-6xl">
+            <div className="flex flex-col items-center gap-8 w-full max-w-6xl mx-auto">
               <div className="bg-white/80 backdrop-blur-md p-8 rounded-[3rem] shadow-xl w-full border border-white/50">
                 <div className="flex justify-between items-center mb-6 px-4">
                   <h2 className="text-3xl font-black text-[#2d6a4f] uppercase italic">Control de Stock</h2>
@@ -334,7 +431,6 @@ export default function App() {
                       {data.map(f => (
                         <tr key={f.id} className={`border-b hover:bg-gray-50 transition-all ${!f.activo ? 'opacity-40 grayscale' : ''}`}>
                           <td className="p-3">
-                            {/* URL DE IMAGEN CORREGIDA */}
                             <img 
                               src={f.imagen_url ? `https://floristeria-api-v2.onrender.com${f.imagen_url}` : '/logo192.png'} 
                               className="w-12 h-12 rounded-2xl object-cover shadow-sm bg-gray-100" 
@@ -364,6 +460,7 @@ export default function App() {
             </div>
           )}
 
+          {/* SECCIÓN PEDIDOS ORIGINAL */}
           {seccion === 'pedidos' && (
             <div className="bg-white/80 p-20 rounded-[4rem] shadow-xl text-center border border-white">
               <h2 className="text-4xl font-black text-[#2d6a4f] uppercase italic">🛒 Próximamente</h2>

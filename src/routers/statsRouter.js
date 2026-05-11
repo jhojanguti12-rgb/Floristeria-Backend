@@ -1,40 +1,43 @@
 const express = require('express');
 const router = express.Router();
-// Importa tus modelos (ajusta la ruta según donde estén tus modelos reales)
-const Flower = require('../models/Flower'); 
-const Pedido = require('../models/Pedido');
-const Usuario = require('../models/Usuario');
+const db = require('../config/db'); // Tu conexión a MySQL
 
 router.get('/resumen', async (req, res) => {
   try {
-    // 1. Contar flores (Inventario)
-    const totalFlores = await Flower.countDocuments();
+    // 1. Ejecutamos todas las consultas en paralelo para que sea rápido
+    // IMPORTANTE: Verifica que tus tablas se llamen 'flowers', 'usuarios' y 'pedidos'
+    const [flowersCount] = await db.query('SELECT COUNT(*) as total FROM flowers');
+    const [usersCount] = await db.query('SELECT COUNT(*) as total FROM usuarios');
     
-    // 2. Contar usuarios (Personal)
-    const totalPersonal = await Usuario.countDocuments();
-    
-    // 3. Contar pedidos totales
-    const totalPedidos = await Pedido.countDocuments();
-    
-    // 4. Calcular ventas totales (Suma de la columna 'total' de pedidos)
-    const ventasRecaudadas = await Pedido.aggregate([
-      { $group: { _id: null, total: { $sum: "$total" } } }
-    ]);
+    // Usamos try/catch interno para pedidos por si aún no tienes esa tabla creada
+    let totalPedidos = 0;
+    let ventasTotal = 0;
+    let pedidosLista = [];
 
-    // 5. Obtener los últimos 4 pedidos para la lista del dashboard
-    const pedidosRecientes = await Pedido.find()
-      .sort({ createdAt: -1 })
-      .limit(4);
+    try {
+      const [ordersCount] = await db.query('SELECT COUNT(*) as total FROM pedidos');
+      const [salesSum] = await db.query('SELECT SUM(total) as totalRecaudado FROM pedidos');
+      const [recentOrders] = await db.query('SELECT * FROM pedidos ORDER BY id DESC LIMIT 4');
+      
+      totalPedidos = ordersCount[0].total;
+      ventasTotal = salesSum[0].totalRecaudado || 0;
+      pedidosLista = recentOrders;
+    } catch (e) {
+      console.log("Tabla pedidos no encontrada o vacía, enviando ceros.");
+    }
 
+    // 2. Enviamos la respuesta al Dashboard
     res.json({
-      inventario: totalFlores,
-      personal: totalPersonal,
+      inventario: flowersCount[0].total,
+      personal: usersCount[0].total,
       pedidosCount: totalPedidos,
-      ventasTotal: ventasRecaudadas[0]?.total || 0,
-      pedidosLista: pedidosRecientes
+      ventasTotal: ventasTotal,
+      pedidosLista: pedidosLista
     });
+
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al obtener estadísticas", error });
+    console.error("Error en las estadísticas:", error);
+    res.status(500).json({ mensaje: "Error al obtener estadísticas", error: error.message });
   }
 });
 

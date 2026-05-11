@@ -38,10 +38,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- 2. Servir archivos estáticos ---
+// Nota: Nos aseguramos de que las rutas sean absolutas y correctas para el despliegue
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // --- 3. RUTAS DE LA API ---
+
+// Ruta de Salud (Útil para que Render sepa que el server está vivo)
+app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Servidor floreciendo 🌸' }));
+
 app.use('/api/usuarios', usuarioRouter); 
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
@@ -55,12 +60,15 @@ app.use('/api/pagos', verificarToken, pagoRouter);
 app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
-// --- 4. CONFIGURACIÓN PARA EL FRONTEND (VITE) ---
-/** * SOLUCIÓN AL ERROR DE RENDER:
- * Usamos una Regex que dice: "Si la ruta NO empieza con /api, sirve el index.html"
- * Esto evita el error de PathError [TypeError]: Missing parameter name
+// --- 4. CONFIGURACIÓN PARA EL FRONTEND (SPA) ---
+/** * Si ninguna de las rutas anteriores (API) coincide, y el usuario refresca la página
+ * en una ruta como /inventario, servimos el index.html para que React se encargue.
  */
-app.get(/^\/(?!api).*/, (req, res) => {
+app.get('*', (req, res, next) => {
+    // Si la ruta empieza por /api, no servimos el HTML (dejamos que pase al error 404 de la API)
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 

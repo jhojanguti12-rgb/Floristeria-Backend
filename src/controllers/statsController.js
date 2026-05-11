@@ -4,21 +4,22 @@ const getResumen = async (req, res) => {
   try {
     const stats = await statsService.getResumenStats();
     
-    // Aseguramos que pedidosLista sea SIEMPRE un array
-    const listaSegura = Array.isArray(stats.pedidosLista) ? stats.pedidosLista : [];
-
-    res.json({
-      inventario: stats.inventario || 0,
-      personal: stats.personal || 0,
-      pedidosCount: stats.pedidosCount || 0,
-      ventasTotal: stats.ventasTotal || 0,
-      pedidosLista: listaSegura,
-      // ESTO ES PARA EL GRÁFICO (El error e.slice)
+    // IMPORTANTE: Aseguramos que todo sea del tipo correcto antes de enviar
+    const respuestaSegura = {
+      inventario: Number(stats.inventario) || 0,
+      personal: Number(stats.personal) || 0,
+      pedidosCount: Number(stats.pedidosCount) || 0,
+      ventasTotal: Number(stats.ventasTotal) || 0,
+      pedidosLista: Array.isArray(stats.pedidosLista) ? stats.pedidosLista : [],
+      // Agregamos esto para evitar el error .slice() del gráfico
       ventasGrafico: [] 
-    });
+    };
+
+    res.json(respuestaSegura);
 
   } catch (error) {
-    res.status(200).json({
+    console.error("Error en Controller:", error);
+    res.json({
       inventario: 0,
       personal: 0,
       pedidosCount: 0,

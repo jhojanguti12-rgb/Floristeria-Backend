@@ -14,32 +14,23 @@ const getResumenStats = async () => {
       pedidosCount = pedidosRows[0]?.total || 0;
       ventasTotal = Number(pedidosRows[0]?.suma) || 0;
 
-      // Traemos los datos reales de la tabla
-      const [recientesRows] = await db.query('SELECT * FROM pedidos ORDER BY id DESC LIMIT 5');
-      
-      // MAPEAREMOS LOS CAMPOS MANUALMENTE PARA ASEGURAR COMPATIBILIDAD
-      pedidosLista = recientesRows.map(p => ({
-        id: p.id,
-        // Probamos con todos los nombres posibles que tu frontend podría buscar:
-        cliente: p.cliente || p.nombre || "Cliente General",
-        total: p.total || 0,
-        fecha: p.fecha || new Date().toISOString()
-      }));
-
+      // Solo traemos los datos, sin mapeos complejos que puedan fallar
+      const [recientesRows] = await db.query('SELECT id, cliente, total, fecha FROM pedidos ORDER BY id DESC LIMIT 5');
+      pedidosLista = recientesRows; 
     } catch (e) {
-      console.warn("Aviso: No se pudieron cargar los detalles de pedidos.");
+      console.warn("Error en tabla pedidos:", e.message);
     }
 
     return {
       inventario: floresRows[0]?.total || 0,
       personal: usuariosRows[0]?.total || 0,
-      pedidosCount,
-      ventasTotal,
-      pedidosLista // <--- Este array ya lleva los datos listos
+      pedidosCount: Number(pedidosCount),
+      ventasTotal: Number(ventasTotal),
+      pedidosLista: Array.isArray(pedidosLista) ? pedidosLista : []
     };
   } catch (error) {
     console.error("Error en Service:", error);
-    throw error;
+    return { inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] };
   }
 };
 

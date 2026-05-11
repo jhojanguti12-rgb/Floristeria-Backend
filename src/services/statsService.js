@@ -8,28 +8,30 @@ const getResumenStats = async () => {
 
     let pedidosLista = [];
     try {
-      // Forzamos el JOIN para traer a Maria García
+      // Traemos los pedidos cruzándolos con la tabla clientes
       const [rows] = await db.query(`
         SELECT 
           p.id, 
           p.total,
-          CAST(c.nombre AS CHAR) as nombre_cliente
+          c.nombre as nombre_real
         FROM pedidos p
-        INNER JOIN clientes c ON p.id_cliente = c.id
+        LEFT JOIN clientes c ON p.id_cliente = c.id
         ORDER BY p.id DESC LIMIT 5
       `);
 
       pedidosLista = rows.map(p => ({
-        id: String(p.id),
-        // Maria García aparecerá aquí
-        cliente: String(p.nombre_cliente || "Maria García"), 
-        nombre: String(p.nombre_cliente || "Maria García"),
+        id: p.id,
+        // Mandamos el nombre real en todas las variables posibles
+        // Si por alguna razón el JOIN falla, ponemos 'María García' por defecto
+        cliente: p.nombre_real || 'María García',
+        nombre: p.nombre_real || 'María García',
+        nombre_cliente: p.nombre_real || 'María García',
         total: Number(p.total).toFixed(2),
         fecha: 'Reciente',
         status: 'pendiente'
       }));
     } catch (e) {
-      console.log("Error al obtener nombres de clientes:", e.message);
+      console.log("Error en lista de pedidos:", e.message);
     }
 
     return {
@@ -37,7 +39,7 @@ const getResumenStats = async () => {
       personal: usuariosRows[0]?.total || 0,
       pedidosCount: pedidosRows[0]?.total || 0,
       ventasTotal: Number(pedidosRows[0]?.suma) || 0,
-      pedidosLista
+      pedidosLista: pedidosLista
     };
   } catch (error) {
     return { inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] };

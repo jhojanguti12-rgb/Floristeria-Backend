@@ -72,3 +72,8 @@ app.use((req, res, next) => {
     // Para cualquier otra ruta (como /inventario, /dashboard, etc), servimos el index.html
     res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
 });
+// --- 5. Manejador de Errores ---
+app.use(errorHandler);
+
+// ESTA LÍNEA ES LA MÁS IMPORTANTE:
+module.exports = app;

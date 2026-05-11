@@ -38,20 +38,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- 2. Servir archivos estáticos ---
-// Nota: Nos aseguramos de que las rutas sean absolutas y correctas para el despliegue
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // --- 3. RUTAS DE LA API ---
 
-// Ruta de Salud (Útil para que Render sepa que el server está vivo)
+// Ruta de Salud
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Servidor floreciendo 🌸' }));
 
+/** * --- REDIRECCIONES DE COMPATIBILIDAD ---
+ * Esto asegura que si el Frontend busca la vieja ruta /api/resumen,
+ * el servidor lo redirija automáticamente a la nueva /api/stats.
+ */
+app.get('/api/resumen', (req, res) => res.redirect(301, '/api/stats'));
+app.get('/api/stats/resumen', (req, res) => res.redirect(301, '/api/stats'));
+
+// Definición de rutas principales
 app.use('/api/usuarios', usuarioRouter); 
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
 app.use('/api/categorias', categoriaRouter); 
-app.use('/api/stats', statsRouter);
+app.use('/api/stats', statsRouter); // Esta es la ruta que corregimos en el router
 
 // Rutas protegidas
 app.use('/api/pedidos', verificarToken, pedidoRouter);
@@ -61,19 +68,18 @@ app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
 // --- 4. CONFIGURACIÓN PARA EL FRONTEND (SPA) ---
-/** * En lugar de app.get('*'), usamos un middleware que captura 
- * cualquier petición que no haya sido manejada por las rutas de arriba.
+/** * Captura cualquier ruta que no sea de la API y sirve el index.html.
+ * Es vital para que React/Vite maneje el enrutamiento interno.
  */
 app.use((req, res, next) => {
-    // Si la ruta empieza por /api, pero llegó aquí, es que la ruta de la API no existe
     if (req.path.startsWith('/api')) {
         return next();
     }
-    // Para cualquier otra ruta (como /inventario, /dashboard, etc), servimos el index.html
     res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
 });
+
 // --- 5. Manejador de Errores ---
 app.use(errorHandler);
 
-// ESTA LÍNEA ES LA MÁS IMPORTANTE:
+// Exportación del objeto app para server.js
 module.exports = app;

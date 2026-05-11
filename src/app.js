@@ -61,15 +61,14 @@ app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
 // --- 4. CONFIGURACIÓN PARA EL FRONTEND (SPA) ---
-/** * Usamos una captura de parámetros sin asteriscos conflictivos.
- * Capturamos cualquier ruta que no sea de la API y servimos el index.html.
+/** * En lugar de app.get('*'), usamos un middleware que captura 
+ * cualquier petición que no haya sido manejada por las rutas de arriba.
  */
-app.get('*', (req, res, next) => {
-    // Si la ruta empieza por /api, la ignoramos para que Express 
-    // pueda manejar errores 404 o rutas no encontradas de la API.
+app.use((req, res, next) => {
+    // Si la ruta empieza por /api, pero llegó aquí, es que la ruta de la API no existe
     if (req.path.startsWith('/api')) {
         return next();
     }
-    // Para todo lo demás, enviamos el index.html del frontend
+    // Para cualquier otra ruta (como /inventario, /dashboard, etc), servimos el index.html
     res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
 });

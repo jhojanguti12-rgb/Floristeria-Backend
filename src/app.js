@@ -61,18 +61,13 @@ app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
 // --- 4. CONFIGURACIÓN PARA EL FRONTEND (SPA) ---
-/** * Si ninguna de las rutas anteriores (API) coincide, y el usuario refresca la página
- * en una ruta como /inventario, servimos el index.html para que React se encargue.
+/** * Usamos una captura de parámetros para que sea compatible 
+ * con las versiones nuevas de path-to-regexp
  */
-app.get('*', (req, res, next) => {
-    // Si la ruta empieza por /api, no servimos el HTML (dejamos que pase al error 404 de la API)
+app.get('/:slug*', (req, res, next) => {
+    // Si la ruta empieza por /api, no servimos el HTML
     if (req.path.startsWith('/api')) {
         return next();
     }
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
-
-// --- 5. Manejador de Errores ---
-app.use(errorHandler);
-
-module.exports = app;

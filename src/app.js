@@ -17,6 +17,7 @@ const categoriaRouter = require('./routers/categoriaRouter');
 const entregaRouter = require('./routers/entregaRouter');
 const proveedorRouter = require('./routers/proveedorRouter');
 const productoRouter = require('./routers/productoRouter');
+const statsRouter = require('./routers/statsRouter');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/usuarios', usuarioRouter);
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
 app.use('/api/categorias', categoriaRouter); 
+app.use('/api/stats', statsRouter);
 
 // Rutas protegidas
 app.use('/api/pedidos', verificarToken, pedidoRouter);

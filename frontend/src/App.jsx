@@ -70,12 +70,12 @@ const RecentOrder = ({ id, customer, status, price, statusColor }) => (
         <i className="bi bi-person-fill"></i>
       </div>
       <div>
-        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">{id}</p>
+        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">#{id.slice(-6).toUpperCase()}</p>
         <p className="text-sm font-black text-gray-700">{customer}</p>
       </div>
     </div>
     <div className="text-right">
-      <p className="text-sm font-black text-gray-800">{price}</p>
+      <p className="text-sm font-black text-gray-800">${price}</p>
       <span className={`${statusColor} text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter`}>{status}</span>
     </div>
   </div>
@@ -197,7 +197,7 @@ const FormularioPersonal = ({ alCerrar, alGuardar }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white/95 p-10 rounded-[4rem] shadow-2xl border border-pink-100 animate-in zoom-in duration-300 w-full max-w-md relative text-center">
+      <div className="bg-white/95 p-10 rounded-[4rem] shadow-2xl border border-pink-100 animate-in zoom-in duration-300 w-full max-md relative text-center">
         <h2 className="text-3xl font-black text-[#2d6a4f] uppercase italic tracking-tighter mb-8">Nuevo Jardinero</h2>
         <form onSubmit={enviar} className="space-y-4">
           <InputEstilizado placeholder="Nombre Completo" value={datos.nombre} onChange={e => setDatos({...datos, nombre: e.target.value})} />
@@ -231,6 +231,15 @@ export default function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // NUEVO: Estado para estadísticas reales del Dashboard
+  const [stats, setStats] = useState({
+    inventario: 0,
+    personal: 0,
+    pedidosCount: 0,
+    ventasTotal: 0,
+    pedidosLista: []
+  });
+
   const fetchData = useCallback(async (endpoint) => {
     setLoading(true);
     try {
@@ -243,10 +252,24 @@ export default function App() {
     }
   }, []);
 
+  // NUEVO: Función para obtener estadísticas reales
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      // Intentamos llamar al nuevo router de estadísticas
+      const res = await api.get('/stats/resumen');
+      setStats(res);
+    } catch (err) {
+      console.error("Error cargando estadísticas reales, usando datos por defecto.");
+    }
+  }, []);
+
   useEffect(() => {
-    if (user && seccion === 'personal') fetchData('/usuarios');
-    if (user && seccion === 'inventario') fetchData('/flores');
-  }, [seccion, fetchData, user]);
+    if (user) {
+      if (seccion === 'inicio') fetchDashboardData();
+      if (seccion === 'personal') fetchData('/usuarios');
+      if (seccion === 'inventario') fetchData('/flores');
+    }
+  }, [seccion, fetchData, fetchDashboardData, user]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -328,7 +351,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto p-10 bg-gray-50/50">
         <div className="w-full max-w-7xl mx-auto">
           
-          {/* NUEVA SECCIÓN DE INICIO (DASHBOARD) */}
+          {/* SECCIÓN DE INICIO ACTUALIZADA CON DATOS REALES */}
           {seccion === 'inicio' && (
             <div className="animate-in fade-in zoom-in duration-500 space-y-8">
               <header className="flex justify-between items-end">
@@ -342,10 +365,10 @@ export default function App() {
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Pedidos Totales" value="128" growth="+12%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
-                <StatCard title="Ventas Totales" value="$2,450" growth="+18%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" />
-                <StatCard title="En Inventario" value={data.length || "0"} growth="-5%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
-                <StatCard title="Personal" value="8" growth="Estable" icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
+                <StatCard title="Pedidos Totales" value={stats.pedidosCount} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
+                <StatCard title="Ventas Totales" value={`$${stats.ventasTotal}`} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" />
+                <StatCard title="En Inventario" value={stats.inventario} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
+                <StatCard title="Personal" value={stats.personal} growth="Estable" icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -359,8 +382,8 @@ export default function App() {
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={[
-                        { d: '11 Jun', v: 400 }, { d: '12 Jun', v: 300 }, { d: '13 Jun', v: 600 },
-                        { d: '14 Jun', v: 500 }, { d: '15 Jun', v: 380 }, { d: '16 Jun', v: 720 }, { d: '17 Jun', v: 400 }
+                        { d: '11 Jun', v: 0 }, { d: '12 Jun', v: 0 }, { d: '13 Jun', v: 0 },
+                        { d: '14 Jun', v: 0 }, { d: '15 Jun', v: 0 }, { d: '16 Jun', v: 0 }, { d: '17 Jun', v: 0 }
                       ]}>
                         <defs>
                           <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
@@ -383,10 +406,20 @@ export default function App() {
                     <button className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    <RecentOrder id="#PED-000128" customer="María González" status="Entregado" price="$85.00" statusColor="bg-green-100 text-green-700" />
-                    <RecentOrder id="#PED-000127" customer="Carlos Ramírez" status="En proceso" price="$120.00" statusColor="bg-orange-100 text-orange-700" />
-                    <RecentOrder id="#PED-000126" customer="Ana Martínez" status="Pendiente" price="$65.00" statusColor="bg-blue-100 text-blue-700" />
-                    <RecentOrder id="#PED-000125" customer="Luis Torres" status="Entregado" price="$90.00" statusColor="bg-green-100 text-green-700" />
+                    {stats.pedidosLista && stats.pedidosLista.length > 0 ? (
+                      stats.pedidosLista.map(pedido => (
+                        <RecentOrder 
+                          key={pedido.id || pedido._id}
+                          id={pedido.id || pedido._id}
+                          customer={pedido.cliente_nombre || "Cliente"}
+                          status={pedido.estado || "Pendiente"}
+                          price={pedido.total || "0"}
+                          statusColor={pedido.estado === 'Entregado' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}
+                        />
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase">No hay pedidos registrados</p>
+                    )}
                   </div>
                 </div>
               </div>

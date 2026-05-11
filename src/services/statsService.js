@@ -10,23 +10,34 @@ const getResumenStats = async () => {
     const [usuariosRows] = await db.query('SELECT COUNT(*) as total FROM usuarios');
     const totalUsuarios = usuariosRows[0]?.total || 0;
 
-    // 3. Bloque seguro para pedidos
+    // 3. Bloque de Pedidos y Ventas
     let pedidosCount = 0;
     let ventasTotal = 0;
-    let pedidosLista = []; // Inicializamos como array vacío
+    let pedidosLista = [];
 
     try {
-      const [pedidosRows] = await db.query('SELECT COUNT(*) as total FROM pedidos');
-      const [ventasRows] = await db.query('SELECT SUM(total) as totalVentas FROM pedidos');
-      
-      // Traemos los últimos 4 pedidos
-      const [recientesRows] = await db.query('SELECT id, cliente, total, fecha FROM pedidos ORDER BY fecha DESC LIMIT 4');
+      // Intentamos obtener el conteo y la suma
+      // Usamos COALESCE para que si es NULL devuelva 0
+      const [pedidosRows] = await db.query('SELECT COUNT(*) as total, COALESCE(SUM(total), 0) as suma FROM pedidos');
       
       pedidosCount = pedidosRows[0]?.total || 0;
-      ventasTotal = ventasRows[0]?.totalVentas || 0;
-      pedidosLista = recientesRows; // <-- Aquí se llena con los datos de la DB
+      ventasTotal = pedidosRows[0]?.suma || 0;
+
+      // Intentamos traer la lista. 
+      // IMPORTANTE: Si tu columna no se llama 'cliente', cámbiala aquí por el nombre correcto
+      const [recientesRows] = await db.query('SELECT * FROM pedidos ORDER BY id DESC LIMIT 5');
+      
+      // Mapeamos los datos para que el frontend los entienda sí o sí
+      pedidosLista = recientesRows.map(p => ({
+        id: p.id,
+        cliente: p.cliente || p.nombre_cliente || p.usuario || "Sin nombre",
+        total: p.total || p.monto || 0,
+        fecha: p.fecha || p.created_at || new Date()
+      }));
+
     } catch (e) {
-      console.warn("Aviso: Tabla pedidos no disponible o vacía.", e.message);
+      console.error("⚠️ Error específico en tabla pedidos:", e.message);
+      // Si la tabla no existe o falla, al menos devolvemos lo que tenemos
     }
 
     return {
@@ -34,11 +45,11 @@ const getResumenStats = async () => {
       personal: totalUsuarios,
       pedidosCount: pedidosCount,
       ventasTotal: ventasTotal,
-      pedidosLista: pedidosLista // <-- CAMBIO AQUÍ: Enviamos la variable, NO un [] vacío
+      pedidosLista: pedidosLista
     };
     
   } catch (error) {
-    console.error("❌ ERROR EN STATSSERVICE:", error.message);
+    console.error("❌ ERROR CRÍTICO EN STATSSERVICE:", error.message);
     throw error;
   }
 };

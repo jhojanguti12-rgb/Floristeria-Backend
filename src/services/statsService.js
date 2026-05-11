@@ -14,16 +14,17 @@ const getResumenStats = async () => {
       pedidosCount = pedidosRows[0]?.total || 0;
       ventasTotal = Number(pedidosRows[0]?.suma) || 0;
 
-      // Consulta ultra simple con JOIN
+      // Consulta mejorada con JOIN y limpieza de datos
       const [recientesRows] = await db.query(`
         SELECT 
           p.id, 
-          COALESCE(c.nombre, 'Cliente') as cliente, 
+          IFNULL(c.nombre, 'Cliente') as cliente, 
           p.total, 
-          p.fecha_pedido as fecha 
+          DATE_FORMAT(p.fecha_pedido, '%Y-%m-%d') as fecha 
         FROM pedidos p
         LEFT JOIN clientes c ON p.id_cliente = c.id
-        ORDER BY p.id DESC LIMIT 5
+        ORDER BY p.id DESC 
+        LIMIT 5
       `);
       
       pedidosLista = recientesRows;
@@ -39,6 +40,7 @@ const getResumenStats = async () => {
       pedidosLista: Array.isArray(pedidosLista) ? pedidosLista : []
     };
   } catch (error) {
+    console.error("Error en Service:", error);
     return { inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] };
   }
 };

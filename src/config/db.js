@@ -1,4 +1,3 @@
-
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
@@ -7,8 +6,9 @@ const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '1018239786j',
-    database: process.env.DB_NAME || 'floristeria_db',
-    // IMPORTANTE: Aiven usa el puerto 20140 (o similar), no el 3306
+    // CAMBIO: Ajustado a 'defaultdb' que es lo que vimos en tu MySQL Workbench
+    database: process.env.DB_NAME || 'defaultdb', 
+    // CAMBIO: El puerto por defecto de Aiven suele ser 20140, asegúrate de tenerlo en tu .env
     port: process.env.DB_PORT || 3306, 
     waitForConnections: true,
     connectionLimit: 10,
@@ -24,11 +24,12 @@ const pool = mysql.createPool({
 (async () => {
     try {
         const connection = await pool.getConnection();
-        console.log('🌸 Conectado a la base de datos MySQL en Aiven (SSL Activo)');
+        // Un pequeño log extra para saber a qué DB nos conectamos exactamente
+        console.log(`🌸 Conectado a MySQL en Aiven | DB: ${process.env.DB_NAME || 'defaultdb'}`);
         connection.release();
     } catch (err) {
         console.error('❌ Error de conexión:', err.message);
-        console.error('💡 Tip: Revisa que la IP 0.0.0.0/0 esté permitida en Aiven');
+        console.error('💡 Tip: Revisa que la IP de Render esté permitida o usa 0.0.0.0/0 en Aiven');
     }
 })();
 

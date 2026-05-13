@@ -4,17 +4,19 @@ const getResumen = async (req, res) => {
   try {
     const stats = await statsService.getResumenStats();
     
+    // Enviamos una estructura fija que el Frontend entienda perfectamente
     res.json({
-      ...stats, // Esto envía todo lo del service
-      // Si el frontend usa alguna de estas, ahora tendrá a Maria Garcia
-      pedidos: stats.pedidosLista,
-      orders: stats.pedidosLista,
-      data: stats.pedidosLista,
-      ventasGrafico: [10, 20, 15, 30, 25, 40, 35] // Pongamos números para ver si el gráfico se mueve
+      inventario: stats.inventario || 0,
+      personal: stats.personal || 0,
+      pedidosCount: stats.pedidosCount || 0,
+      ventasTotal: stats.ventasTotal || 0,
+      pedidosLista: stats.pedidosLista || [], // Este nombre es el que usa el App.jsx
+      ventasGrafico: [10, 20, 15, 30, 25, 40, 35] 
     });
 
   } catch (error) {
-    res.json({ success: false });
+    console.error("Error en Controller:", error);
+    res.status(500).json({ error: "Error interno" });
   }
 };
 

@@ -83,7 +83,7 @@ const RecentOrder = ({ id, customer, status, price }) => (
       </div>
       <div>
         <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">#{String(id || '0').toUpperCase()}</p>
-        <p className="text-sm font-black text-gray-700">{String(customer || "Maria Garcia").slice(0, 20)}</p>
+        <p className="text-sm font-black text-gray-700">{String(customer || "Cliente").slice(0, 20)}</p>
       </div>
     </div>
     <div className="text-right">
@@ -221,7 +221,9 @@ const FormularioPersonal = ({ alCerrar, alGuardar }) => {
 export default function App() {
   const [user, setUser] = useState(() => {
     const saved = window.sessionStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
   });
   
   const [seccion, setSeccion] = useState('inicio');
@@ -248,9 +250,20 @@ export default function App() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const res = await api.get('/stats/resumen');
-      if(res) setStats(res);
-    } catch (err) { console.error("Error cargando estadísticas reales."); }
+      // Usamos /stats ya que vimos que es la ruta que responde datos
+      const res = await api.get('/stats');
+      if(res) {
+        setStats({
+          inventario: res.inventario || 0,
+          personal: res.personal || 0,
+          pedidosCount: res.pedidosCount || 0,
+          ventasTotal: res.ventasTotal || 0,
+          pedidosLista: res.pedidosLista || res.pedidos || []
+        });
+      }
+    } catch (err) { 
+      console.error("Error en Dashboard:", err); 
+    }
   }, []);
 
   useEffect(() => {
@@ -352,7 +365,8 @@ export default function App() {
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    {/* Altura fija para evitar error de ResponsiveContainer */}
+                    <ResponsiveContainer width="100%" height={250}>
                       <AreaChart data={[
                         { d: 'Lun', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Mar', v: (stats?.ventasTotal || 0) / 4 }, { d: 'Mié', v: stats?.ventasTotal || 0 },
                         { d: 'Jue', v: (stats?.ventasTotal || 0) / 3 }, { d: 'Vie', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Sáb', v: (stats?.ventasTotal || 0) / 5 }, { d: 'Dom', v: 0 }
@@ -379,11 +393,11 @@ export default function App() {
                   </div>
                   <div className="space-y-2">
                     {stats?.pedidosLista && stats.pedidosLista.length > 0 ? (
-                      stats.pedidosLista.map((pedido) => (
+                      stats.pedidosLista.slice(0, 5).map((pedido) => (
                         <RecentOrder 
                           key={pedido.id || Math.random()}
                           id={pedido.id || '0'}
-                          customer={pedido.nombre || pedido.cliente || "Maria Garcia"}
+                          customer={pedido.nombre || pedido.cliente || "Cliente"}
                           status={pedido.status || "completado"}
                           price={pedido.total || 0}
                         />

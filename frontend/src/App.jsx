@@ -377,21 +377,24 @@ export default function App() {
                     <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter text-sm">Pedidos recientes</h3>
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
-                  <div className="space-y-2">
-                    {stats.pedidosLista && stats.pedidosLista.length > 0 ? (
-                      stats.pedidosLista.map(pedido => (
-                        <RecentOrder 
-                          key={pedido.id}
-                          id={pedido.id}
-                          customer={pedido.nombre_cliente || "Maria Garcia"}
-                          status={pedido.status || "pendiente"}
-                          price={pedido.total || 0}
-                        />
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">No hay pedidos registrados</p>
-                    )}
-                  </div>
+                 <div className="space-y-2">
+  {/* Detalle #4: Lista real de pedidos */}
+  {stats.pedidosLista && stats.pedidosLista.length > 0 ? (
+    stats.pedidosLista.map((pedido) => (
+      <RecentOrder 
+        key={pedido.id}
+        id={pedido.id}
+        customer={pedido.nombre || pedido.cliente || "Maria Garcia"}
+        status={pedido.status || "completado"}
+        price={pedido.total || 0}
+      />
+    ))
+  ) : (
+    <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">
+      No hay pedidos registrados
+    </p>
+  )}
+</div>
                 </div>
               </div>
             </div>

@@ -23,32 +23,28 @@ const api = {
     return data;
   },
   patch: async (endpoint, body) => {
-    try {
-      const user = JSON.parse(window.sessionStorage.getItem('user'));
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify(body),
-      });
-      return res.json();
-    } catch (e) { return { error: true }; }
+    const user = JSON.parse(window.sessionStorage.getItem('user'));
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.token}`
+      },
+      body: JSON.stringify(body),
+    });
+    return res.json();
   },
   delete: async (endpoint) => {
-    try {
-      const user = JSON.parse(window.sessionStorage.getItem('user'));
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, { 
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${user?.token}` }
-      });
-      return res.json();
-    } catch (e) { return { error: true }; }
+    const user = JSON.parse(window.sessionStorage.getItem('user'));
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, { 
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${user?.token}` }
+    });
+    return res.json();
   }
 };
 
-// --- FORMATEADOR DE MONEDA ---
+// --- FORMATEADORES ---
 const formatCOP = (val) => {
   const numero = Number(val) || 0;
   return new Intl.NumberFormat('es-CO', {
@@ -315,6 +311,17 @@ export default function App() {
     );
   }
 
+  // --- PREPARACIÓN DE DATOS DEL GRÁFICO (Blindado) ---
+  const chartData = [
+    { d: 'Lun', v: (stats.ventasTotal * 0.1) },
+    { d: 'Mar', v: (stats.ventasTotal * 0.15) },
+    { d: 'Mié', v: (stats.ventasTotal * 0.4) },
+    { d: 'Jue', v: (stats.ventasTotal * 0.1) },
+    { d: 'Vie', v: (stats.ventasTotal * 0.2) },
+    { d: 'Sáb', v: (stats.ventasTotal * 0.05) },
+    { d: 'Dom', v: 0 }
+  ];
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex font-sans overflow-hidden">
       <aside className="w-80 bg-[#1b4332] text-white p-8 flex flex-col shadow-2xl z-20">
@@ -365,12 +372,9 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height={250}>
-                      <AreaChart data={[
-                        { d: 'Lun', v: (stats.ventasTotal / 2) }, { d: 'Mar', v: (stats.ventasTotal / 4) }, { d: 'Mié', v: stats.ventasTotal },
-                        { d: 'Jue', v: (stats.ventasTotal / 3) }, { d: 'Vie', v: (stats.ventasTotal / 2) }, { d: 'Sáb', v: (stats.ventasTotal / 5) }, { d: 'Dom', v: 0 }
-                      ]}>
+                  <div className="h-64 w-full" style={{ minHeight: '250px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
                         <defs>
                           <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>

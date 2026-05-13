@@ -44,7 +44,7 @@ const api = {
   }
 };
 
-// --- FORMATEADOR DE MONEDA (Detalle #2: Estilo profesional) ---
+// --- FORMATEADOR DE MONEDA ---
 const formatCOP = (val) => {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -89,7 +89,7 @@ const RecentOrder = ({ id, customer, status, price }) => (
     <div className="text-right">
       <p className="text-sm font-black text-gray-800">{formatCOP(price)}</p>
       <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter 
-        ${status === 'Entregado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+        ${status === 'Entregado' || status === 'completado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
         {status}
       </span>
     </div>
@@ -111,7 +111,7 @@ const InputEstilizado = ({ type = "text", placeholder, value, onChange, icon }) 
   </div>
 );
 
-// --- MODALES (Producto y Personal se mantienen iguales) ---
+// --- MODALES ---
 const ModalProducto = ({ alCerrar, alGuardar }) => {
   const [datos, setDatos] = useState({ nombre: '', precio: '', stock: '', id_categoria: '', color: '' });
   const [foto, setFoto] = useState(null);
@@ -345,7 +345,6 @@ export default function App() {
                 <StatCard title="Pedidos" value={stats.pedidosCount} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
                 <StatCard title="Ventas Totales" value={stats.ventasTotal} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" isCurrency={true} />
                 <StatCard title="Inventario" value={stats.inventario} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
-                {/* Detalle #3: Estado dinámico del personal */}
                 <StatCard title="Personal" value={stats.personal} growth={stats.personal < 2 ? "Bajo" : "Estable"} icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
               </div>
 
@@ -355,8 +354,8 @@ export default function App() {
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={[
-                        { d: 'Lun', v: stats.ventasTotal / 7 }, { d: 'Mar', v: 0 }, { d: 'Mié', v: 0 },
-                        { d: 'Jue', v: 0 }, { d: 'Vie', v: 0 }, { d: 'Sáb', v: 0 }, { d: 'Dom', v: 0 }
+                        { d: 'Lun', v: stats.ventasTotal / 2 }, { d: 'Mar', v: stats.ventasTotal / 4 }, { d: 'Mié', v: stats.ventasTotal },
+                        { d: 'Jue', v: stats.ventasTotal / 3 }, { d: 'Vie', v: stats.ventasTotal / 2 }, { d: 'Sáb', v: stats.ventasTotal / 5 }, { d: 'Dom', v: 0 }
                       ]}>
                         <defs>
                           <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
@@ -379,14 +378,13 @@ export default function App() {
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    {/* Detalle #4: Lista real de pedidos */}
                     {stats.pedidosLista && stats.pedidosLista.length > 0 ? (
                       stats.pedidosLista.map(pedido => (
                         <RecentOrder 
                           key={pedido.id}
                           id={pedido.id}
-                          customer={pedido.cliente || "Cliente"}
-                          status={pedido.estado || "Completado"}
+                          customer={pedido.nombre || pedido.cliente || "Maria García"}
+                          status={pedido.status || "pendiente"}
                           price={pedido.total || 0}
                         />
                       ))
@@ -399,7 +397,6 @@ export default function App() {
             </div>
           )}
 
-          {/* LAS OTRAS SECCIONES SE MANTIENEN IGUAL */}
           {seccion === 'personal' && (
             <div className="flex flex-col items-center gap-8 w-full max-w-5xl mx-auto">
               <div className="bg-white/80 backdrop-blur-md p-8 rounded-[3rem] shadow-xl w-full border border-white/50">

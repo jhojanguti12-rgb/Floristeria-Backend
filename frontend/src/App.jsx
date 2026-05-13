@@ -1,127 +1,113 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
-// --- CONFIGURACIÓN ---
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
-const formatCOP = (val) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0
-  }).format(Number(val) || 0);
-};
+const formatCOP = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(val) || 0);
 
 export default function App() {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = window.sessionStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) { return null; }
-  });
+  const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
+  const [stats, setStats] = useState({ inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] });
 
-  const [stats, setStats] = useState({
-    inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: []
-  });
-
-  const [cargando, setCargando] = useState(false);
-
-  const fetchDashboardData = useCallback(async () => {
-    if (!user) return;
-    setCargando(true);
+  const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/stats`);
       const data = await res.json();
-      console.log("Datos recibidos:", data);
+      if (data) setStats({ ...data, pedidosLista: Array.isArray(data.pedidosLista) ? data.pedidosLista : [] });
+    } catch (e) { console.error(e); }
+  }, []);
 
-      if (data) {
-        setStats({
-          inventario: data.inventario || 0,
-          personal: data.personal || 0,
-          pedidosCount: data.pedidosCount || 0,
-          ventasTotal: data.ventasTotal || 0,
-          pedidosLista: Array.isArray(data.pedidosLista) ? data.pedidosLista : []
-        });
-      }
-    } catch (err) {
-      console.error("Error cargando dashboard:", err);
-    } finally {
-      setCargando(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) fetchDashboardData();
-  }, [user, fetchDashboardData]);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const email = e.target[0].value;
-    const password = e.target[1].value;
-    try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (data.token) {
-        const userData = { rol: data.rol, nombre: data.nombre, token: data.token };
-        window.sessionStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-      } else {
-        alert("Error: " + (data.mensaje || "Credenciales inválidas"));
-      }
-    } catch (err) {
-      alert("Error de conexión");
-    }
-  };
+  useEffect(() => { if (user) fetchData(); }, [user, fetchData]);
 
   if (!user) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', fontFamily: 'sans-serif' }}>
-        <form onSubmit={handleLogin} style={{ background: 'white', padding: '40px', borderRadius: '20px', width: '300px' }}>
-          <h2 style={{ textAlign: 'center', color: '#2d6a4f' }}>LOGIN</h2>
-          <input type="email" placeholder="Email" style={{ width: '100%', marginBottom: '10px', padding: '10px' }} required />
-          <input type="password" placeholder="Pass" style={{ width: '100%', marginBottom: '20px', padding: '10px' }} required />
-          <button style={{ width: '100%', padding: '10px', background: '#d81b60', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold' }}>ENTRAR</button>
+      <div className="min-h-screen flex items-center justify-center bg-[#1b4332] p-4">
+        <form className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-md animate__animated animate__fadeIn" onSubmit={async (e) => {
+          e.preventDefault();
+          const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: e.target[0].value, password: e.target[1].value })
+          });
+          const d = await res.json();
+          if (d.token) {
+            const u = { nombre: d.nombre, token: d.token };
+            window.sessionStorage.setItem('user', JSON.stringify(u));
+            setUser(u);
+          } else { alert("Error al entrar"); }
+        }}>
+          <h2 className="text-3xl font-black text-[#2d6a4f] mb-6 text-center uppercase tracking-tighter">Floristería</h2>
+          <input type="email" placeholder="Email" className="w-full p-4 mb-3 rounded-2xl bg-gray-100 border-none font-bold" />
+          <input type="password" placeholder="Pass" className="w-full p-4 mb-6 rounded-2xl bg-gray-100 border-none font-bold" />
+          <button className="w-full bg-[#d81b60] text-white p-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-pink-200">Entrar</button>
         </form>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5', padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <h1 style={{ color: '#2d6a4f', margin: 0 }}>🌸 Panel Floristería</h1>
-          <button onClick={() => { window.sessionStorage.clear(); setUser(null); }} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>Salir</button>
+    <div className="min-h-screen bg-[#f8fafc] flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#1b4332] text-white p-8 flex flex-col">
+        <h1 className="text-2xl font-black italic mb-10 tracking-tighter">FLORISTERÍA</h1>
+        <nav className="flex-1 space-y-4 font-bold text-green-200">
+          <div className="text-white bg-white/10 p-3 rounded-xl">Inicio</div>
+        </nav>
+        <button onClick={() => { window.sessionStorage.clear(); setUser(null); }} className="p-4 bg-white/5 hover:bg-red-500/20 rounded-2xl font-bold transition-all text-sm">Cerrar Sesión</button>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-10 overflow-y-auto">
+        <header className="mb-10">
+          <h1 className="text-4xl font-black text-[#2d6a4f]">¡Hola, {user.nombre}!</h1>
+          <p className="text-gray-400 font-bold">Resumen de tu jardín hoy</p>
+        </header>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-4 gap-6 mb-10">
+          {[
+            { t: 'Pedidos', v: stats.pedidosCount, c: 'text-green-600', bg: 'bg-green-50' },
+            { t: 'Ventas', v: formatCOP(stats.ventasTotal), c: 'text-pink-600', bg: 'bg-pink-50' },
+            { t: 'Stock', v: stats.inventario, c: 'text-orange-600', bg: 'bg-orange-50' },
+            { t: 'Personal', v: stats.personal, c: 'text-blue-600', bg: 'bg-blue-50' }
+          ].map((s, i) => (
+            <div key={i} className={`${s.bg} p-6 rounded-[2.5rem] border border-white shadow-sm`}>
+              <p className="text-[10px] font-black uppercase text-gray-400 mb-1">{s.t}</p>
+              <h3 className={`text-2xl font-black ${s.c}`}>{s.v}</h3>
+            </div>
+          ))}
         </div>
 
-        {cargando ? <p>Cargando datos...</p> : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
-              <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '15px' }}>
-                <small>PEDIDOSs</small>
-                <h2 style={{ margin: 0 }}>{stats.pedidosCount}</h2>
-              </div>
-              <div style={{ padding: '20px', background: '#fce4ec', borderRadius: '15px' }}>
-                <small>VENTAS TOTALES</small>
-                <h2 style={{ margin: 0 }}>{formatCOP(stats.ventasTotal)}</h2>
-              </div>
-            </div>
+        {/* Bottom Section */}
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 h-80">
+            <h3 className="font-black text-[#2d6a4f] mb-4 uppercase text-xs">Ventas Semanales</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={[{n:'L', v:0}, {n:'V', v:stats.ventasTotal}]}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                <XAxis dataKey="n" hide />
+                <Tooltip />
+                <Area type="monotone" dataKey="v" stroke="#2d6a4f" fill="#2d6a4f" fillOpacity={0.1} strokeWidth={4} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
 
-            <h3>Últimos Pedidos</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {stats.pedidosLista.length > 0 ? stats.pedidosLista.map((p, i) => (
-                <div key={i} style={{ padding: '10px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>
-                    <strong>#{String(p.id).substring(0, 5)}</strong> - {String(p.cliente || 'Anónimo')}
-                  </span>
-                  <span style={{ fontWeight: 'bold', color: '#2d6a4f' }}>{formatCOP(p.total)}</span>
+          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+            <h3 className="font-black text-[#2d6a4f] mb-6 uppercase text-xs">Pedidos Recientes</h3>
+            <div className="space-y-4">
+              {stats.pedidosLista.map((p, i) => (
+                <div key={i} className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <div>
+                    {/* EL ARREGLO MAESTRO ESTÁ AQUÍ: USAMOS STRING Y SUBSTRING */}
+                    <p className="text-[9px] font-black text-gray-300">#{String(p.id || i).toUpperCase().substring(0,6)}</p>
+                    <p className="text-sm font-black text-gray-700">{String(p.cliente || 'Cliente')}</p>
+                  </div>
+                  <p className="font-black text-green-700">{formatCOP(p.total)}</p>
                 </div>
-              )) : <p>No hay pedidos recientes</p>}
+              ))}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

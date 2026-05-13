@@ -6,9 +6,14 @@ const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
 const api = {
   get: async (endpoint) => {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!res.ok) throw new Error(`Error en GET ${endpoint}`);
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`);
+      if (!res.ok) throw new Error(`Error en GET ${endpoint}`);
+      return await res.json();
+    } catch (err) {
+      console.error("API Get Error:", err);
+      return null;
+    }
   },
   post: async (endpoint, body, isFormData = false) => {
     const options = {
@@ -255,7 +260,7 @@ export default function App() {
           personal: res.personal || 0,
           pedidosCount: res.pedidosCount || 0,
           ventasTotal: res.ventasTotal || 0,
-          pedidosLista: Array.isArray(res.pedidosLista) ? res.pedidosLista : (res.pedidos || [])
+          pedidosLista: Array.isArray(res.pedidosLista) ? res.pedidosLista : (Array.isArray(res.pedidos) ? res.pedidos : [])
         });
       }
     } catch (err) { 
@@ -311,14 +316,15 @@ export default function App() {
     );
   }
 
-  // --- PREPARACIÓN DE DATOS DEL GRÁFICO (Blindado) ---
+  // --- 🛠️ CAMBIO SEGURO: Datos del gráfico siempre protegidos ---
+  const ventasBase = Number(stats.ventasTotal) || 0;
   const chartData = [
-    { d: 'Lun', v: (stats.ventasTotal * 0.1) },
-    { d: 'Mar', v: (stats.ventasTotal * 0.15) },
-    { d: 'Mié', v: (stats.ventasTotal * 0.4) },
-    { d: 'Jue', v: (stats.ventasTotal * 0.1) },
-    { d: 'Vie', v: (stats.ventasTotal * 0.2) },
-    { d: 'Sáb', v: (stats.ventasTotal * 0.05) },
+    { d: 'Lun', v: Math.floor(ventasBase * 0.1) },
+    { d: 'Mar', v: Math.floor(ventasBase * 0.15) },
+    { d: 'Mié', v: Math.floor(ventasBase * 0.4) },
+    { d: 'Jue', v: Math.floor(ventasBase * 0.1) },
+    { d: 'Vie', v: Math.floor(ventasBase * 0.2) },
+    { d: 'Sáb', v: Math.floor(ventasBase * 0.05) },
     { d: 'Dom', v: 0 }
   ];
 
@@ -373,20 +379,28 @@ export default function App() {
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full" style={{ minHeight: '250px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <defs>
-                          <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {/* 🛠️ CAMBIO SEGURO: Validación total del contenedor del gráfico */}
+                    {chartData && chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                          <defs>
+                            <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
+                          <YAxis hide={true} /> 
+                          <Tooltip />
+                          <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full bg-gray-50 rounded-3xl">
+                        <p className="text-gray-400 font-bold text-xs uppercase italic tracking-widest">Cargando gráfico...</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -396,10 +410,11 @@ export default function App() {
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    {stats?.pedidosLista?.length > 0 ? (
-                      stats.pedidosLista.slice(0, 5).map((pedido) => (
+                    {/* 🛠️ CAMBIO SEGURO: Validación extrema de la lista de pedidos */}
+                    {Array.isArray(stats?.pedidosLista) && stats.pedidosLista.length > 0 ? (
+                      stats.pedidosLista.slice(0, 5).map((pedido, idx) => (
                         <RecentOrder 
-                          key={pedido.id || Math.random()}
+                          key={pedido.id || `pedido-${idx}`}
                           id={pedido.id}
                           customer={pedido.cliente || pedido.nombre || "Cliente"}
                           status={pedido.status}
@@ -425,7 +440,13 @@ export default function App() {
                       <tr><th className="p-5">Nombre</th><th className="p-5">Email</th><th className="p-5">Rol</th></tr>
                     </thead>
                     <tbody className="divide-y text-sm">
-                      {data.map(u => <tr key={u.id} className="hover:bg-gray-50"><td className="p-5 font-bold">{u.nombre}</td><td className="p-5">{u.email}</td><td className="p-5 uppercase font-black text-[10px] text-pink-500">{u.rol}</td></tr>)}
+                      {Array.isArray(data) && data.map(u => (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="p-5 font-bold">{u.nombre}</td>
+                          <td className="p-5">{u.email}</td>
+                          <td className="p-5 uppercase font-black text-[10px] text-pink-500">{u.rol}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -448,7 +469,7 @@ export default function App() {
                       <tr><th className="p-5">Foto</th><th className="p-5">Nombre</th><th className="p-5">Precio</th><th className="p-5">Stock</th><th className="p-5">Acciones</th></tr>
                     </thead>
                     <tbody className="text-sm">
-                      {data.map(f => (
+                      {Array.isArray(data) && data.map(f => (
                         <tr key={f.id} className={`border-b hover:bg-gray-50 transition-all ${!f.activo ? 'opacity-40 grayscale' : ''}`}>
                           <td className="p-3">
                             <img src={f.imagen_url ? `https://floristeria-api-v2.onrender.com${f.imagen_url}` : '/logo192.png'} className="w-12 h-12 rounded-2xl object-cover shadow-sm bg-gray-100" alt="flor" />

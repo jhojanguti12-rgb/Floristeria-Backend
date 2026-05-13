@@ -2,13 +2,12 @@ const db = require('../config/db');
 
 const getResumenStats = async () => {
   try {
-    // 1. Consultas de conteo con manejo de nulos
-    const [flores] = await db.query('SELECT COUNT(*) as t FROM flores');
-    const [usuarios] = await db.query('SELECT COUNT(*) as t FROM usuarios');
-    const [pedidosT] = await db.query('SELECT COUNT(*) as t, SUM(total) as s FROM pedidos');
+    // Usamos desestructuración clara: [filas]
+    const [resFlores] = await db.query('SELECT COUNT(*) as t FROM flores');
+    const [resUsuarios] = await db.query('SELECT COUNT(*) as t FROM usuarios');
+    const [resPedidosT] = await db.query('SELECT COUNT(*) as t, SUM(total) as s FROM pedidos');
     
-    // 2. Consulta de pedidos con LEFT JOIN para evitar que desaparezcan si el cliente no existe
-    const [filas] = await db.query(`
+    const [filasPedidos] = await db.query(`
       SELECT 
         p.id, 
         p.total, 
@@ -19,23 +18,28 @@ const getResumenStats = async () => {
       LIMIT 5
     `);
 
-    // 3. Mapeo ultra-seguro de la lista de pedidos
-    const pedidosLista = Array.isArray(filas) ? filas.map(p => ({
-      id: p.id,
+    // Extraemos los valores con seguridad total
+    const inventario = resFlores[0]?.t || 0;
+    const personal = resUsuarios[0]?.t || 0;
+    const pedidosCount = resPedidosT[0]?.t || 0;
+    const ventasTotal = Number(resPedidosT[0]?.s) || 0;
+
+    // Mapeo de la lista
+    const pedidosLista = Array.isArray(filasPedidos) ? filasPedidos.map(p => ({
+      id: p.id, // Esto ahora llegará como número o string pero App.jsx ya lo maneja
       cliente: p.nombre_cliente || "Sin Nombre",
       nombre: p.nombre_cliente || "Sin Nombre",
       total: Number(p.total) || 0,
       status: "completado"
     })) : [];
 
-    // 4. Estructura final (Limpia y estándar)
     return {
-      inventario: (flores && flores[0]) ? flores[0].t : 0,
-      personal: (usuarios && usuarios[0]) ? usuarios[0].t : 0,
-      pedidosCount: (pedidosT && pedidosT[0]) ? pedidosT[0].t : 0,
-      ventasTotal: (pedidosT && pedidosT[0]) ? Number(pedidosT[0].s || 0) : 0,
-      pedidosLista: pedidosLista,
-      ventasGrafico: [0, 0, 0, 0, 0, 0, 0] // Espacio para el gráfico
+      inventario,
+      personal,
+      pedidosCount,
+      ventasTotal,
+      pedidosLista,
+      ventasGrafico: [0, 0, 0, 0, 0, 0, 0]
     };
 
   } catch (error) {
@@ -45,7 +49,8 @@ const getResumenStats = async () => {
       personal: 0, 
       pedidosCount: 0, 
       ventasTotal: 0, 
-      pedidosLista: [] 
+      pedidosLista: [],
+      ventasGrafico: [0, 0, 0, 0, 0, 0, 0]
     };
   }
 };

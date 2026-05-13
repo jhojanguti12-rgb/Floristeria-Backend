@@ -4,26 +4,26 @@ const getResumen = async (req, res) => {
   try {
     const stats = await statsService.getResumenStats();
     
-    // Objeto ultra-completo para que ninguna parte del Frontend falle
+    // Si llegamos aquí, enviamos un objeto que NADA puede romper
     res.json({
-      inventario: Number(stats.inventario) || 0,
-      personal: Number(stats.personal) || 0,
-      pedidosCount: Number(stats.pedidosCount) || 0,
-      ventasTotal: Number(stats.ventasTotal) || 0,
-      pedidosLista: Array.isArray(stats.pedidosLista) ? stats.pedidosLista : [],
-      // Datos ficticios para los gráficos (esto suele evitar el crash)
+      inventario: stats.inventario,
+      personal: stats.personal,
+      pedidosCount: stats.pedidosCount,
+      ventasTotal: stats.ventasTotal,
+      pedidosLista: stats.pedidosLista,
+      // Todas estas listas vacías evitan que los gráficos hagan "crash"
       ventasGrafico: [0, 0, 0, 0, 0, 0, 0],
       ventasMensuales: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       series: [{ name: 'Ventas', data: [0, 0, 0, 0, 0, 0, 0] }],
-      labels: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'],
+      labels: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
+      ultimosPedidos: stats.pedidosLista,
       success: true
     });
 
   } catch (error) {
-    console.error("Error crítico en Controller:", error);
-    res.status(200).json({
-      inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0,
-      pedidosLista: [], ventasGrafico: [], success: false
+    res.json({ 
+      inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, 
+      pedidosLista: [], ventasGrafico: [], success: false 
     });
   }
 };

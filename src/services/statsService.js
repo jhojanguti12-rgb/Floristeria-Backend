@@ -5,17 +5,28 @@ const getResumenStats = async () => {
     const [flores] = await db.query('SELECT COUNT(*) as t FROM flores');
     const [usuarios] = await db.query('SELECT COUNT(*) as t FROM usuarios');
     const [pedidosTotal] = await db.query('SELECT COUNT(*) as t, SUM(total) as s FROM pedidos');
-    const [filas] = await db.query('SELECT id, total FROM pedidos ORDER BY id DESC LIMIT 5');
+    
+    // Obtenemos los pedidos y el nombre del cliente
+    const [filas] = await db.query(`
+      SELECT p.id, p.total, c.nombre 
+      FROM pedidos p 
+      LEFT JOIN clientes c ON p.id_cliente = c.id 
+      ORDER BY p.id DESC LIMIT 5
+    `);
 
-    // Mapeo ultra-seguro: convertimos todo a Strings y Numbers básicos
-    const pedidosLista = filas.map(p => ({
-      id: String(p.id),
-      cliente: "Maria Garcia", // Texto plano, sin riesgo
-      nombre: "Maria Garcia",  // Texto plano
-      total: Number(p.total || 0).toFixed(2),
-      status: "pendiente",
-      fecha: "Reciente"
-    }));
+    const pedidosLista = filas.map(p => {
+      // Limpiamos el nombre: si no existe, Maria Garcia; si existe, lo convertimos a texto puro
+      const nombreLimpio = p.nombre ? String(p.nombre).trim() : "Maria Garcia";
+      
+      return {
+        id: String(p.id),
+        cliente: nombreLimpio,
+        nombre: nombreLimpio,
+        total: Number(p.total || 0).toFixed(2),
+        status: "pendiente",
+        fecha: "13 de mayo"
+      };
+    });
 
     return {
       inventario: Number(flores[0]?.t || 0),

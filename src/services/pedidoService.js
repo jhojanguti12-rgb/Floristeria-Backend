@@ -4,8 +4,8 @@ const pedidoService = {
     // 1. Obtener todos los pedidos con nombres de clientes
     getAllPedidos: async () => {
         try {
-            // USAMOS LEFT JOIN y COALESCE para asegurar que el nombre siempre llegue
-            // Cambiamos p.fecha_pedido a p.fecha_pedido AS fecha para compatibilidad
+            // USAMOS LEFT JOIN para traer el nombre desde la tabla clientes
+            // COALESCE pone 'Cliente Registrado' si el nombre es nulo por alguna razón
             const query = `
                 SELECT 
                     p.id, 
@@ -20,11 +20,12 @@ const pedidoService = {
 
             // Formateamos los resultados para que el Frontend los lea perfecto
             return results.map(pedido => ({
-                ...pedido,
                 id: String(pedido.id),
-                nombre: pedido.cliente, // Duplicamos por si el frontend busca 'nombre'
-                total: Number(pedido.total).toFixed(2),
-                status: 'pendiente' // Valor por defecto para los badges de colores
+                fecha: pedido.fecha,
+                cliente: pedido.cliente, 
+                nombre: pedido.cliente, // Duplicamos para que App.jsx lo encuentre siempre
+                total: Number(pedido.total),
+                status: 'completado' // Forzamos estado para el color verde en el dashboard
             }));
 
         } catch (error) {

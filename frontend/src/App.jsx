@@ -383,7 +383,7 @@ export default function App() {
                         <RecentOrder 
                           key={pedido.id}
                           id={pedido.id}
-                          customer={pedido.nombre || pedido.cliente || "Maria García"}
+                          customer={"PRUEBA: " + (pedido.nombre || pedido.cliente || "Maria Garcia")}
                           status={pedido.status || "pendiente"}
                           price={pedido.total || 0}
                         />

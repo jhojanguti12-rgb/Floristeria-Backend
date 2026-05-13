@@ -110,11 +110,11 @@ export default function App() {
                   </div>
                   <p className="font-black text-green-600">{formatCOP(p.total)}</p>
                 </div>
-              )) : <p className="text-gray-400 text-sm font-bold">No hay pedidos registrados.</p>}
+              )) : <p className="text-gray-400 text-sm font-bold">No hay pedidos registradoss.</p>}
             </div>
           </div>
         </div>
       </main>
     </div>
   );
-}
+} 

@@ -80,32 +80,36 @@ const StatCard = ({ title, value, growth, icon, color, bg, isCurrency = false })
   </div>
 );
 
-// ✅ ARREGLO CRÍTICO 1: RecentOrder (Aquí moría la app según tu captura)
-const RecentOrder = ({ id, customer, status, price }) => (
-  <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-all border-b border-gray-50 last:border-0">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-        <i className="bi bi-person-fill"></i>
+// ✅ ARREGLO DEFINITIVO: RecentOrder blindado contra IDs numéricos
+const RecentOrder = ({ id, customer, status, price }) => {
+  const safeId = String(id || '0');
+  const safeCustomer = String(customer || "Cliente");
+
+  return (
+    <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-all border-b border-gray-50 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+          <i className="bi bi-person-fill"></i>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">
+            #{safeId.toUpperCase().slice(-6)} 
+          </p>
+          <p className="text-sm font-black text-gray-700">
+            {safeCustomer.slice(0, 20)}
+          </p>
+        </div>
       </div>
-      <div>
-        {/* Usamos String() para asegurar que slice() funcione siempre */}
-        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">
-          #{String(id || '0').slice(-6).toUpperCase()}
-        </p>
-        <p className="text-sm font-black text-gray-700">
-          {String(customer || "Cliente").slice(0, 20)}
-        </p>
+      <div className="text-right">
+        <p className="text-sm font-black text-gray-800">{formatCOP(price)}</p>
+        <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter 
+          ${status === 'completado' || status === 'Entregado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+          {status || 'pendiente'}
+        </span>
       </div>
     </div>
-    <div className="text-right">
-      <p className="text-sm font-black text-gray-800">{formatCOP(price)}</p>
-      <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter 
-        ${status === 'completado' || status === 'Entregado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-        {status || 'pendiente'}
-      </span>
-    </div>
-  </div>
-);
+  );
+};
 
 const InputEstilizado = ({ type = "text", placeholder, value, onChange, icon }) => (
   <div className="relative w-full">
@@ -322,7 +326,7 @@ export default function App() {
     );
   }
 
-  // ✅ ARREGLO CRÍTICO 2: Protección total de datos para el gráfico
+  // Protección total de datos para el gráfico
   const ventasBase = Number(stats.ventasTotal) || 0;
   const chartData = [
     { d: 'Lun', v: Math.floor(ventasBase * 0.1) },
@@ -382,9 +386,10 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
+                {/* 🛠️ ARREGLO DE GRÁFICO: Min-height asegurado */}
+                <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[450px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
-                  <div className="h-64 w-full" style={{ minHeight: '250px' }}>
+                  <div className="flex-1 w-full" style={{ minHeight: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>

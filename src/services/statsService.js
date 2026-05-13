@@ -6,7 +6,6 @@ const getResumenStats = async () => {
     const [usuarios] = await db.query('SELECT COUNT(*) as t FROM usuarios');
     const [pedidosTotal] = await db.query('SELECT COUNT(*) as t, SUM(total) as s FROM pedidos');
     
-    // Obtenemos los pedidos y el nombre del cliente
     const [filas] = await db.query(`
       SELECT p.id, p.total, c.nombre 
       FROM pedidos p 
@@ -15,16 +14,24 @@ const getResumenStats = async () => {
     `);
 
     const pedidosLista = filas.map(p => {
-      // Limpiamos el nombre: si no existe, Maria Garcia; si existe, lo convertimos a texto puro
-      const nombreLimpio = p.nombre ? String(p.nombre).trim() : "Maria Garcia";
+      // Si p.nombre existe lo usamos, si no, forzamos Maria Garcia
+      const valorNombre = p.nombre ? String(p.nombre) : "Maria Garcia";
       
       return {
         id: String(p.id),
-        cliente: nombreLimpio,
-        nombre: nombreLimpio,
+        // Enviamos todas estas opciones para que el Frontend no tenga excusa
+        cliente: valorNombre,
+        nombre: valorNombre,
+        customer: valorNombre,
+        customer_name: valorNombre,
+        nombre_cliente: valorNombre,
+        user: valorNombre,
+        name: valorNombre,
+        // Datos de apoyo
         total: Number(p.total || 0).toFixed(2),
         status: "pendiente",
-        fecha: "13 de mayo"
+        estado: "pendiente",
+        fecha: "Hoy"
       };
     });
 

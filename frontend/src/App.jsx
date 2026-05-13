@@ -44,13 +44,14 @@ const api = {
   }
 };
 
-// --- FORMATEADOR DE MONEDA ---
+// --- FORMATEADOR DE MONEDA (Blindado) ---
 const formatCOP = (val) => {
+  const numero = Number(val) || 0;
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
     minimumFractionDigits: 0
-  }).format(val);
+  }).format(numero);
 };
 
 // --- COMPONENTES DE DISEÑO ---
@@ -66,8 +67,7 @@ const StatCard = ({ title, value, growth, icon, color, bg, isCurrency = false })
             {isCurrency ? formatCOP(value) : value}
         </h4>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full 
-            ${growth === 'Estable' ? 'bg-blue-100 text-blue-600' : 
-              growth.includes('+') ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+            ${String(growth).includes('+') ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
           {growth}
         </span>
       </div>
@@ -82,21 +82,20 @@ const RecentOrder = ({ id, customer, status, price }) => (
         <i className="bi bi-person-fill"></i>
       </div>
       <div>
-        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">#{String(id).toUpperCase()}</p>
-        <p className="text-sm font-black text-gray-700">{customer}</p>
+        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">#{String(id || '0').toUpperCase()}</p>
+        <p className="text-sm font-black text-gray-700">{String(customer || "Maria Garcia").slice(0, 20)}</p>
       </div>
     </div>
     <div className="text-right">
       <p className="text-sm font-black text-gray-800">{formatCOP(price)}</p>
       <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter 
-        ${status === 'Entregado' || status === 'completado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-        {status}
+        ${status === 'completado' || status === 'Entregado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+        {status || 'pendiente'}
       </span>
     </div>
   </div>
 );
 
-// --- COMPONENTES ATÓMICOS ---
 const InputEstilizado = ({ type = "text", placeholder, value, onChange, icon }) => (
   <div className="relative w-full">
     {icon && <i className={`bi ${icon} absolute left-4 top-1/2 -translate-y-1/2 text-gray-400`}></i>}
@@ -250,7 +249,7 @@ export default function App() {
   const fetchDashboardData = useCallback(async () => {
     try {
       const res = await api.get('/stats/resumen');
-      setStats(res);
+      if(res) setStats(res);
     } catch (err) { console.error("Error cargando estadísticas reales."); }
   }, []);
 
@@ -304,7 +303,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex font-sans overflow-hidden">
-      {/* SIDEBAR */}
       <aside className="w-80 bg-[#1b4332] text-white p-8 flex flex-col shadow-2xl z-20">
         <div className="mb-12">
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">FLORISTERÍA</h1>
@@ -333,7 +331,9 @@ export default function App() {
             <div className="animate-in fade-in zoom-in duration-500 space-y-8">
               <header className="flex justify-between items-end">
                 <div>
-                  <h1 className="text-4xl font-black text-[#2d6a4f] tracking-tighter">¡Bienvenido, {user.nombre.split(' ')[0]}! 👋</h1>
+                  <h1 className="text-4xl font-black text-[#2d6a4f] tracking-tighter">
+                    ¡Bienvenido{user?.nombre ? `, ${String(user.nombre).split(' ')[0]}` : ''}! 👋
+                  </h1>
                   <p className="text-gray-400 font-bold text-sm">Resumen de hoy.</p>
                 </div>
                 <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border text-sm font-bold text-gray-500">
@@ -342,20 +342,20 @@ export default function App() {
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Pedidos" value={stats.pedidosCount} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
-                <StatCard title="Ventas Totales" value={stats.ventasTotal} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" isCurrency={true} />
-                <StatCard title="Inventario" value={stats.inventario} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
-                <StatCard title="Personal" value={stats.personal} growth={stats.personal < 2 ? "Bajo" : "Estable"} icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
+                <StatCard title="Pedidos" value={stats?.pedidosCount || 0} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
+                <StatCard title="Ventas Totales" value={stats?.ventasTotal || 0} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" isCurrency={true} />
+                <StatCard title="Inventario" value={stats?.inventario || 0} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
+                <StatCard title="Personal" value={stats?.personal || 0} growth={(stats?.personal || 0) < 2 ? "Bajo" : "Estable"} icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col">
+                <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={[
-                        { d: 'Lun', v: stats.ventasTotal / 2 }, { d: 'Mar', v: stats.ventasTotal / 4 }, { d: 'Mié', v: stats.ventasTotal },
-                        { d: 'Jue', v: stats.ventasTotal / 3 }, { d: 'Vie', v: stats.ventasTotal / 2 }, { d: 'Sáb', v: stats.ventasTotal / 5 }, { d: 'Dom', v: 0 }
+                        { d: 'Lun', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Mar', v: (stats?.ventasTotal || 0) / 4 }, { d: 'Mié', v: stats?.ventasTotal || 0 },
+                        { d: 'Jue', v: (stats?.ventasTotal || 0) / 3 }, { d: 'Vie', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Sáb', v: (stats?.ventasTotal || 0) / 5 }, { d: 'Dom', v: 0 }
                       ]}>
                         <defs>
                           <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
@@ -378,21 +378,18 @@ export default function App() {
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    {/* Renderizado seguro de la lista */}
                     {stats?.pedidosLista && stats.pedidosLista.length > 0 ? (
                       stats.pedidosLista.map((pedido) => (
                         <RecentOrder 
                           key={pedido.id || Math.random()}
-                          id={pedido.id || 'N/A'}
+                          id={pedido.id || '0'}
                           customer={pedido.nombre || pedido.cliente || "Maria Garcia"}
                           status={pedido.status || "completado"}
                           price={pedido.total || 0}
                         />
                       ))
                     ) : (
-                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">
-                        No hay pedidos registrados
-                      </p>
+                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">No hay pedidos recientes</p>
                     )}
                   </div>
                 </div>

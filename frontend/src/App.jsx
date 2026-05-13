@@ -80,7 +80,7 @@ const StatCard = ({ title, value, growth, icon, color, bg, isCurrency = false })
   </div>
 );
 
-// 🛠️ ARREGLO 1: Corrección del error .slice() en el ID del pedido
+// ✅ ARREGLO CRÍTICO 1: RecentOrder (Aquí moría la app según tu captura)
 const RecentOrder = ({ id, customer, status, price }) => (
   <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-all border-b border-gray-50 last:border-0">
     <div className="flex items-center gap-3">
@@ -88,8 +88,9 @@ const RecentOrder = ({ id, customer, status, price }) => (
         <i className="bi bi-person-fill"></i>
       </div>
       <div>
+        {/* Usamos String() para asegurar que slice() funcione siempre */}
         <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">
-          #{String(id || '0').toUpperCase()}
+          #{String(id || '0').slice(-6).toUpperCase()}
         </p>
         <p className="text-sm font-black text-gray-700">
           {String(customer || "Cliente").slice(0, 20)}
@@ -321,7 +322,7 @@ export default function App() {
     );
   }
 
-  // 🛠️ ARREGLO 2: Protección total de datos numéricos para el gráfico
+  // ✅ ARREGLO CRÍTICO 2: Protección total de datos para el gráfico
   const ventasBase = Number(stats.ventasTotal) || 0;
   const chartData = [
     { d: 'Lun', v: Math.floor(ventasBase * 0.1) },
@@ -384,27 +385,21 @@ export default function App() {
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full" style={{ minHeight: '250px' }}>
-                    {chartData && chartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData}>
-                          <defs>
-                            <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                          <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
-                          <YAxis hide={true} />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full bg-gray-50 rounded-3xl">
-                        <p className="text-gray-400 font-bold text-xs">Sin datos disponibles</p>
-                      </div>
-                    )}
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
+                        <YAxis hide={true} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 

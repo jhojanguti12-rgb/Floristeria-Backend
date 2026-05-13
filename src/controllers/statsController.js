@@ -4,27 +4,17 @@ const getResumen = async (req, res) => {
   try {
     const stats = await statsService.getResumenStats();
     
-    // Si llegamos aquí, enviamos un objeto que NADA puede romper
     res.json({
-      inventario: stats.inventario,
-      personal: stats.personal,
-      pedidosCount: stats.pedidosCount,
-      ventasTotal: stats.ventasTotal,
-      pedidosLista: stats.pedidosLista,
-      // Todas estas listas vacías evitan que los gráficos hagan "crash"
-      ventasGrafico: [0, 0, 0, 0, 0, 0, 0],
-      ventasMensuales: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      series: [{ name: 'Ventas', data: [0, 0, 0, 0, 0, 0, 0] }],
-      labels: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
-      ultimosPedidos: stats.pedidosLista,
-      success: true
+      ...stats, // Esto envía todo lo del service
+      // Si el frontend usa alguna de estas, ahora tendrá a Maria Garcia
+      pedidos: stats.pedidosLista,
+      orders: stats.pedidosLista,
+      data: stats.pedidosLista,
+      ventasGrafico: [10, 20, 15, 30, 25, 40, 35] // Pongamos números para ver si el gráfico se mueve
     });
 
   } catch (error) {
-    res.json({ 
-      inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, 
-      pedidosLista: [], ventasGrafico: [], success: false 
-    });
+    res.json({ success: false });
   }
 };
 

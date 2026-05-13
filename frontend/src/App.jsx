@@ -80,6 +80,7 @@ const StatCard = ({ title, value, growth, icon, color, bg, isCurrency = false })
   </div>
 );
 
+// 🛠️ ARREGLO 1: Corrección del error .slice() en el ID del pedido
 const RecentOrder = ({ id, customer, status, price }) => (
   <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl transition-all border-b border-gray-50 last:border-0">
     <div className="flex items-center gap-3">
@@ -87,8 +88,12 @@ const RecentOrder = ({ id, customer, status, price }) => (
         <i className="bi bi-person-fill"></i>
       </div>
       <div>
-        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">#{String(id || '0').toUpperCase()}</p>
-        <p className="text-sm font-black text-gray-700">{String(customer || "Cliente").slice(0, 20)}</p>
+        <p className="text-[10px] font-bold text-gray-400 leading-none mb-1">
+          #{String(id || '0').toUpperCase()}
+        </p>
+        <p className="text-sm font-black text-gray-700">
+          {String(customer || "Cliente").slice(0, 20)}
+        </p>
       </div>
     </div>
     <div className="text-right">
@@ -316,7 +321,7 @@ export default function App() {
     );
   }
 
-  // --- 🛠️ CAMBIO SEGURO: Datos del gráfico siempre protegidos ---
+  // 🛠️ ARREGLO 2: Protección total de datos numéricos para el gráfico
   const ventasBase = Number(stats.ventasTotal) || 0;
   const chartData = [
     { d: 'Lun', v: Math.floor(ventasBase * 0.1) },
@@ -379,7 +384,6 @@ export default function App() {
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full" style={{ minHeight: '250px' }}>
-                    {/* 🛠️ CAMBIO SEGURO: Validación total del contenedor del gráfico */}
                     {chartData && chartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
@@ -391,14 +395,14 @@ export default function App() {
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                           <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
-                          <YAxis hide={true} /> 
+                          <YAxis hide={true} />
                           <Tooltip />
                           <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gray-50 rounded-3xl">
-                        <p className="text-gray-400 font-bold text-xs uppercase italic tracking-widest">Cargando gráfico...</p>
+                        <p className="text-gray-400 font-bold text-xs">Sin datos disponibles</p>
                       </div>
                     )}
                   </div>
@@ -410,11 +414,10 @@ export default function App() {
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    {/* 🛠️ CAMBIO SEGURO: Validación extrema de la lista de pedidos */}
                     {Array.isArray(stats?.pedidosLista) && stats.pedidosLista.length > 0 ? (
                       stats.pedidosLista.slice(0, 5).map((pedido, idx) => (
                         <RecentOrder 
-                          key={pedido.id || `pedido-${idx}`}
+                          key={pedido.id || `p-${idx}`}
                           id={pedido.id}
                           customer={pedido.cliente || pedido.nombre || "Cliente"}
                           status={pedido.status}

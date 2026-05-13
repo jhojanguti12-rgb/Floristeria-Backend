@@ -1,6 +1,16 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --rosa-suave: #fce4ec;
-  --verde-flor: #2d6a4f;
+@layer base {
+  :root {
+    --rosa-suave: #fce4ec;
+    --verde-flor: #2d6a4f;
+  }
+}
+
+/* Tus estilos personalizados abajo */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #f8fafc;
 }

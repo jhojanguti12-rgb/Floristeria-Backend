@@ -23,28 +23,32 @@ const api = {
     return data;
   },
   patch: async (endpoint, body) => {
-    const user = JSON.parse(window.sessionStorage.getItem('user'));
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PATCH',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user?.token}`
-      },
-      body: JSON.stringify(body),
-    });
-    return res.json();
+    try {
+      const user = JSON.parse(window.sessionStorage.getItem('user'));
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify(body),
+      });
+      return res.json();
+    } catch (e) { return { error: true }; }
   },
   delete: async (endpoint) => {
-    const user = JSON.parse(window.sessionStorage.getItem('user'));
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, { 
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${user?.token}` }
-    });
-    return res.json();
+    try {
+      const user = JSON.parse(window.sessionStorage.getItem('user'));
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.token}` }
+      });
+      return res.json();
+    } catch (e) { return { error: true }; }
   }
 };
 
-// --- FORMATEADOR DE MONEDA (Blindado) ---
+// --- FORMATEADOR DE MONEDA ---
 const formatCOP = (val) => {
   const numero = Number(val) || 0;
   return new Intl.NumberFormat('es-CO', {
@@ -230,8 +234,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-
+  
   const [stats, setStats] = useState({
     inventario: 0,
     personal: 0,
@@ -241,16 +244,14 @@ export default function App() {
   });
 
   const fetchData = useCallback(async (endpoint) => {
-    setLoading(true);
     try {
       const response = await api.get(endpoint);
       setData(Array.isArray(response) ? response : []);
-    } catch (err) { setData([]); } finally { setLoading(false); }
+    } catch (err) { setData([]); }
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Usamos /stats ya que vimos que es la ruta que responde datos
       const res = await api.get('/stats');
       if(res) {
         setStats({
@@ -258,11 +259,11 @@ export default function App() {
           personal: res.personal || 0,
           pedidosCount: res.pedidosCount || 0,
           ventasTotal: res.ventasTotal || 0,
-          pedidosLista: res.pedidosLista || res.pedidos || []
+          pedidosLista: Array.isArray(res.pedidosLista) ? res.pedidosLista : (res.pedidos || [])
         });
       }
     } catch (err) { 
-      console.error("Error en Dashboard:", err); 
+      console.error("Error Dashboard:", err); 
     }
   }, []);
 
@@ -355,21 +356,20 @@ export default function App() {
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Pedidos" value={stats?.pedidosCount || 0} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
-                <StatCard title="Ventas Totales" value={stats?.ventasTotal || 0} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" isCurrency={true} />
-                <StatCard title="Inventario" value={stats?.inventario || 0} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
-                <StatCard title="Personal" value={stats?.personal || 0} growth={(stats?.personal || 0) < 2 ? "Bajo" : "Estable"} icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
+                <StatCard title="Pedidos" value={stats.pedidosCount} growth="+0%" icon="bi-bag-check" color="text-green-600" bg="bg-green-50" />
+                <StatCard title="Ventas Totales" value={stats.ventasTotal} growth="+0%" icon="bi-currency-dollar" color="text-pink-600" bg="bg-pink-50" isCurrency={true} />
+                <StatCard title="Inventario" value={stats.inventario} growth="+0%" icon="bi-flower2" color="text-orange-600" bg="bg-orange-50" />
+                <StatCard title="Personal" value={stats.personal} growth="Estable" icon="bi-people" color="text-blue-600" bg="bg-blue-50" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
                   <h3 className="font-black text-[#2d6a4f] uppercase tracking-tighter mb-8">Ventas Semanales</h3>
                   <div className="h-64 w-full">
-                    {/* Altura fija para evitar error de ResponsiveContainer */}
                     <ResponsiveContainer width="100%" height={250}>
                       <AreaChart data={[
-                        { d: 'Lun', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Mar', v: (stats?.ventasTotal || 0) / 4 }, { d: 'Mié', v: stats?.ventasTotal || 0 },
-                        { d: 'Jue', v: (stats?.ventasTotal || 0) / 3 }, { d: 'Vie', v: (stats?.ventasTotal || 0) / 2 }, { d: 'Sáb', v: (stats?.ventasTotal || 0) / 5 }, { d: 'Dom', v: 0 }
+                        { d: 'Lun', v: (stats.ventasTotal / 2) }, { d: 'Mar', v: (stats.ventasTotal / 4) }, { d: 'Mié', v: stats.ventasTotal },
+                        { d: 'Jue', v: (stats.ventasTotal / 3) }, { d: 'Vie', v: (stats.ventasTotal / 2) }, { d: 'Sáb', v: (stats.ventasTotal / 5) }, { d: 'Dom', v: 0 }
                       ]}>
                         <defs>
                           <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
@@ -379,7 +379,7 @@ export default function App() {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
-                        <Tooltip contentStyle={{ borderRadius: '15px', border: 'none' }} />
+                        <Tooltip />
                         <Area type="monotone" dataKey="v" stroke="#2d6a4f" strokeWidth={4} fillOpacity={1} fill="url(#colorVentas)" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -392,18 +392,18 @@ export default function App() {
                     <button onClick={() => setSeccion('pedidos')} className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:underline">Ver todos</button>
                   </div>
                   <div className="space-y-2">
-                    {stats?.pedidosLista && stats.pedidosLista.length > 0 ? (
+                    {stats?.pedidosLista?.length > 0 ? (
                       stats.pedidosLista.slice(0, 5).map((pedido) => (
                         <RecentOrder 
                           key={pedido.id || Math.random()}
-                          id={pedido.id || '0'}
-                          customer={pedido.nombre || pedido.cliente || "Cliente"}
-                          status={pedido.status || "completado"}
-                          price={pedido.total || 0}
+                          id={pedido.id}
+                          customer={pedido.cliente || pedido.nombre || "Cliente"}
+                          status={pedido.status}
+                          price={pedido.total}
                         />
                       ))
                     ) : (
-                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">No hay pedidos recientes</p>
+                      <p className="text-center text-gray-400 py-10 font-bold text-xs uppercase italic">No hay pedidos registrados</p>
                     )}
                   </div>
                 </div>
@@ -475,5 +475,5 @@ export default function App() {
         </div>
       </main>
     </div>
-  );  
+  );
 }

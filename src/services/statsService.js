@@ -2,13 +2,12 @@ const db = require('../config/db');
 
 const getResumenStats = async () => {
   try {
-    // 1. Usamos consultas individuales con manejo de errores por cada una
+    // 1. Consultas de conteo con manejo de nulos
     const [flores] = await db.query('SELECT COUNT(*) as t FROM flores');
     const [usuarios] = await db.query('SELECT COUNT(*) as t FROM usuarios');
     const [pedidosT] = await db.query('SELECT COUNT(*) as t, SUM(total) as s FROM pedidos');
     
-    // 2. CAMBIO CLAVE: Usamos LEFT JOIN en lugar de INNER JOIN
-    // Esto garantiza que si el cliente no existe, el pedido IGUAL aparezca
+    // 2. Consulta de pedidos con LEFT JOIN para evitar que desaparezcan si el cliente no existe
     const [filas] = await db.query(`
       SELECT 
         p.id, 
@@ -20,8 +19,7 @@ const getResumenStats = async () => {
       LIMIT 5
     `);
 
-    // 3. Mapeo ultra-seguro
-    // Si 'filas' no es un array por algún error raro, evitamos que rompa
+    // 3. Mapeo ultra-seguro de la lista de pedidos
     const pedidosLista = Array.isArray(filas) ? filas.map(p => ({
       id: p.id,
       cliente: p.nombre_cliente || "Sin Nombre",
@@ -30,21 +28,18 @@ const getResumenStats = async () => {
       status: "completado"
     })) : [];
 
-    // 4. Estructura de retorno garantizada
-    const respuesta = {
+    // 4. Estructura final (Limpia y estándar)
+    return {
       inventario: (flores && flores[0]) ? flores[0].t : 0,
       personal: (usuarios && usuarios[0]) ? usuarios[0].t : 0,
       pedidosCount: (pedidosT && pedidosT[0]) ? pedidosT[0].t : 0,
       ventasTotal: (pedidosT && pedidosT[0]) ? Number(pedidosT[0].s || 0) : 0,
-      pedidosLista: pedidosLista
+      pedidosLista: pedidosLista,
+      ventasGrafico: [0, 0, 0, 0, 0, 0, 0] // Espacio para el gráfico
     };
 
-    console.log("Stats enviadas al front:", respuesta); // Para que lo veas en tu terminal de Node
-    return respuesta;
-
   } catch (error) {
-    console.error("❌ Error crítico en statsService:", error);
-    // IMPORTANTE: Siempre devolver la estructura completa aunque falle
+    console.error("❌ Error en statsService:", error);
     return { 
       inventario: 0, 
       personal: 0, 

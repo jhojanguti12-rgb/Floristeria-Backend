@@ -99,7 +99,7 @@ export default function App() {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
               <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '15px' }}>
-                <small>PEDIDOS</small>
+                <small>PEDIDOSs</small>
                 <h2 style={{ margin: 0 }}>{stats.pedidosCount}</h2>
               </div>
               <div style={{ padding: '20px', background: '#fce4ec', borderRadius: '15px' }}>

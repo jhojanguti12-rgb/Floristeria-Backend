@@ -13,20 +13,27 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0 
 }).format(Number(val) || 0);
 
-// Diccionario inteligente de imágenes por defecto a color de alta calidad
+// 🌟 MOTOR DE DETECCIÓN VISUAL MEJORADO (Ignora tildes, mayúsculas y espacios)
 const obtenerImagenPorDefecto = (nombre = '', categoria = '') => {
-  const n = nombre.toLowerCase();
+  // Limpiamos el texto: quitamos tildes, mayúsculas y espacios extras
+  const n = nombre
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // Borra tildes de forma definitiva
+
   if (n.includes('ros')) return 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600';
   if (n.includes('girasol')) return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=600';
   if (n.includes('orqui') || n.includes('orch')) return 'https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?q=80&w=600';
   if (n.includes('tulip')) return 'https://images.unsplash.com/photo-1520763185298-1b434c919102?q=80&w=600';
+  if (n.includes('clavel')) return 'https://images.unsplash.com/photo-1587334206596-f330689b9d36?q=80&w=600';
+  if (n.includes('margarita')) return 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=600';
   
-  // Por categoría si no coincide el nombre
+  // Si no coincide el nombre de la flor, usamos fotos premium por categoría
   if (categoria === 'Ramos') return 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=600';
   if (categoria === 'Plantas') return 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=600';
   if (categoria === 'Insumos') return 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?q=80&w=600';
   
-  // Imagen comodín de flores variadas
+  // Imagen comodín de flores variadas por si acaso
   return 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=600';
 };
 
@@ -111,7 +118,7 @@ export default function App() {
     const categoriaInput = e.target[1].value;
     let imagenInput = e.target[4].value;
 
-    // Si no es un enlace HTTP válido, le inyectamos una foto real a color automáticamente
+    // Si no es un enlace real de internet, forzamos la asignación de imagen premium
     if (!imagenInput.startsWith('http://') && !imagenInput.startsWith('https://')) {
       imagenInput = obtenerImagenPorDefecto(nombreInput, categoriaInput);
     }
@@ -179,8 +186,8 @@ export default function App() {
         if (diferenciaDias >= 4) {
           alertas.push({
             id: p._id || p.id,
-            mensaje: `${p.nombre} - Lote antiguo`,
-            detalle: `Lleva ${diferenciaDias} días en vitrina. Recomendable revisar frescura.`
+            mensaje: `${p.nombre} - Verificar lote`,
+            detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
           });
         }
       }
@@ -203,8 +210,8 @@ export default function App() {
           <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
           <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">¡El jardín de tus sueños está a un paso!</p>
           <div className="space-y-4">
-            <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
-            <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
+            <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
+            <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
             <button disabled={loading} className="w-full bg-[#d81b60] text-white p-5 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#ad1457] mt-4 disabled:bg-gray-400">
               {loading ? 'Entrando...' : 'Entrar al Jardín'}
             </button>
@@ -367,7 +374,7 @@ export default function App() {
 
                   const prodId = prod._id || prod.id;
                   
-                  // 🌟 CONTROL EXTRA: Si la URL guardada en base de datos es inválida, se calcula el fallback visual en caliente
+                  // 🌟 MEJORA RADICAL: Si el campo 'imagen' no es un link real web, calculamos la foto a color procesando el NOMBRE del producto directamente
                   const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
                     ? prod.imagen 
                     : obtenerImagenPorDefecto(prod.nombre, prod.categoria);
@@ -378,9 +385,8 @@ export default function App() {
                         <img 
                           src={imagenSrc} 
                           alt={prod.nombre} 
-                          className="w-full h-full object-cover transition-opacity duration-300"
+                          className="w-full h-full object-cover"
                           onError={(e) => { 
-                            // Respaldo final si el link de internet se cae o está roto
                             e.target.src = obtenerImagenPorDefecto(prod.nombre, prod.categoria); 
                           }} 
                         />
@@ -446,7 +452,7 @@ export default function App() {
             <form onSubmit={handleAgregarProducto} className="space-y-4 text-xs font-bold text-gray-500">
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Nombre del Producto *</label>
-                <input type="text" required placeholder="Ej. Tulipanes Holandeses" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="text" required placeholder="Ej. Rosa Azul o Girasol Gigante" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div>
@@ -472,7 +478,7 @@ export default function App() {
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Enlace / URL de la Foto (Color)</label>
-                <input type="text" placeholder="Pega un link de internet o escribe ej: Girasol" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="text" placeholder="Puedes dejarlo en blanco si usas palabras clave" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div>

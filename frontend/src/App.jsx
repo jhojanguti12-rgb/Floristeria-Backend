@@ -53,12 +53,10 @@ export default function App() {
     e.preventDefault();
     setLoading(true);
     
-    // Obtenemos los valores de forma segura sin romper la estructura del form
     const email = e.target[0].value;
     const password = e.target[1].value;
 
     try {
-      // Ajustamos la ruta para asegurar compatibilidad con tu backend
       const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,23 +75,47 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor. Verifica que el Backend esté encendido en Render.");
     } finally {
-      setLoading(false);
+      loading(false);
     }
   };
 
-  // --- VISTA DE LOGIN ---
+  // --- VISTA DE LOGIN MÁGICO MODIFICADA ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
+        {/* 1. Fondo de pantalla usando tu imagen local de la carpeta public */}
         <div className="absolute inset-0 z-0" style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1920')",
-            backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.8)'
+            backgroundImage: "url('/fondo.jpg')",
+            backgroundSize: 'cover', 
+            backgroundPosition: 'center'
           }}
         />
+        
+        {/* Estilos inyectados rápidamente solo para animar el rebote del Emoji */}
+        <style>{`
+          @keyframes bounceEmoji {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(20px); }
+          }
+          .animate-bounce-emoji {
+            animation: bounceEmoji 2s infinite ease-in-out;
+          }
+        `}</style>
+
         <form className="relative z-10 bg-white/90 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center" onSubmit={handleLogin}>
-          <div className="flex justify-center mb-4 text-[#d81b60] text-4xl">🌸</div>
-          <h2 className="text-4xl font-black text-[#1b4332] mb-1 uppercase tracking-tighter">Floristería</h2>
-          <p className="text-[10px] font-black text-gray-400 mb-8 uppercase tracking-[0.2em]">Panel de Gestión</p>
+          
+          {/* 2. EMOJI DE FLOR SALTARTÍN CON CONTROL DE VELOCIDAD */}
+          <div className="flex justify-center mb-4 text-6xl animate-bounce-emoji select-none">
+            🌸
+          </div>
+          
+          <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
+          
+          {/* 3. CAMBIO DE FRASE: Quitamos "Panel de Gestión" / "Panel Administrativo" */}
+          <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">
+            ¡El jardín de tus sueños está a un paso!
+          </p>
+          
           <div className="space-y-4">
             <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
             <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />

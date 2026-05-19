@@ -5,6 +5,7 @@ import {
 
 import fondoJardin from './fondo-jardin.jpg';
 
+// CONFIGURACIÓN DE TU BACKEND EN RENDER
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
 const formatCOP = (val) => new Intl.NumberFormat('es-CO', { 
@@ -16,9 +17,9 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('inicio'); // Lógica de pestañas: 'inicio' o 'inventario'
+  const [activeTab, setActiveTab] = useState('inicio'); 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showModal, setShowModal] = useState(false); // Modal para agregar productos
+  const [showModal, setShowModal] = useState(false); 
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -26,23 +27,19 @@ export default function App() {
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
   });
 
-  // Lista de productos real de la base de datos (con fallback de simulación realista)
-  const [productos, setProductos] = useState([
-    { id: 1, nombre: 'Rosa San Valentín', categoria: 'Flores Sueltas', stock: 45, precio: 2500, imagen: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=500', fechaIngreso: '2026-05-18' },
-    { id: 2, nombre: 'Ramo Primavera', categoria: 'Ramos', stock: 3, precio: 35000, imagen: 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=500', fechaIngreso: '2026-05-14' },
-    { id: 3, nombre: 'Girasoles Sol', categoria: 'Flores Sueltas', stock: 20, precio: 1800, imagen: 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=500', fechaIngreso: '2026-05-17' },
-    { id: 4, nombre: 'Jarrones de Cerámica', categoria: 'Insumos', stock: 15, precio: 15000, imagen: 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?q=80&w=500', fechaIngreso: '2026-05-01' },
-    { id: 5, nombre: 'Plantas Suculentas', categoria: 'Plantas', stock: 0, precio: 8000, imagen: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=500', fechaIngreso: '2026-05-10' }
-  ]);
+  // 🌟 CORREGIDO: El inventario ahora empieza vacío esperando los productos reales de tu base de datos
+  const [productos, setProductos] = useState([]);
 
+  // --- FUNCIÓN PARA CARGAR DATOS DE INICIO Y PRODUCTOS ---
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/stats`, {
+      // 1. Cargar Estadísticas generales
+      const resStats = await fetch(`${API_BASE_URL}/stats`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (resStats.ok) {
+        const data = await resStats.json();
         setStats({
           inventario: data.inventario || 0,
           personal: data.personal || 0,
@@ -51,8 +48,17 @@ export default function App() {
           pedidosLista: Array.isArray(data.pedidosLista) ? data.pedidosLista : []
         });
       }
+
+      // 2. Cargar Productos reales desde la Base de Datos
+      const resProd = await fetch(`${API_BASE_URL}/productos`, {
+        headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
+      });
+      if (resProd.ok) {
+        const listaProd = await resProd.json();
+        setProductos(Array.isArray(listaProd) ? listaProd : []);
+      }
     } catch (e) {
-      console.error("Error cargando estadísticas:", e);
+      console.error("Error cargando datos del servidor:", e);
     }
   }, [user]);
 
@@ -60,6 +66,7 @@ export default function App() {
     if (user) fetchData();
   }, [user, fetchData]);
 
+  // --- LÓGICA DE LOGIN ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -87,11 +94,10 @@ export default function App() {
     }
   };
 
-  // Lógica para añadir una nueva flor desde el formulario modal
-  const handleAgregarProducto = (e) => {
+  // --- LÓGICA PARA AÑADIR PRODUCTO REAL AL BACKEND ---
+  const handleAgregarProducto = async (e) => {
     e.preventDefault();
-    const nuevo = {
-      id: Date.now(),
+    const nuevoProducto = {
       nombre: e.target[0].value,
       categoria: e.target[1].value,
       stock: Number(e.target[2].value),
@@ -100,29 +106,69 @@ export default function App() {
       fechaIngreso: e.target[5].value
     };
 
-    setProductos([nuevo, ...productos]);
-    setShowModal(false);
-  };
+    try {
+      const res = await fetch(`${API_BASE_URL}/productos`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(nuevoProducto)
+      });
 
-  const handleEliminarProducto = (id) => {
-    if (window.confirm("¿Seguro que deseas eliminar este producto de la floristería?")) {
-      setProductos(productos.filter(p => p.id !== id));
+      if (res.ok) {
+        // Si el backend lo guarda con éxito, recargamos la lista actualizada
+        fetchData();
+        setShowModal(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.mensaje || "Error al guardar el producto");
+      }
+    } catch (error) {
+      alert("Error de conexión al intentar añadir el producto.");
     }
   };
 
-  // Lógica de cálculo automático de Alertas de Frescura (Alertas si lleva más de 4 días)
+  // --- 🌟 LÓGICA CONECTADA PARA ELIMINAR DE LA BASE DE DATOS REAL ---
+  const handleEliminarProducto = async (id) => {
+    if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente de la base de datos?")) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
+          method: 'DELETE',
+          headers: { 
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          // Si el servidor lo borró correctamente, actualizamos el estado visual de inmediato
+          setProductos(productos.filter(p => p.id !== id || p._id !== id));
+          fetchData(); // Sincroniza métricas del inicio
+        } else {
+          alert("El servidor no permitió borrar el producto. Revisa los permisos.");
+        }
+      } catch (error) {
+        alert("Error de conexión al intentar eliminar el producto.");
+      }
+    }
+  };
+
+  // Alertas de frescura basadas en la fecha de ingreso
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
     productos.forEach(p => {
       if (p.categoria === 'Flores Sueltas' || p.categoria === 'Ramos') {
-        const ingreso = new Date(p.fechaIngreso);
+        const fechaRef = p.fechaIngreso || p.createdAt;
+        if (!fechaRef) return;
+        const ingreso = new Date(fechaRef);
         const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
         if (diferenciaDias >= 4) {
           alertas.push({
-            id: p.id,
-            mensaje: `${p.nombre} - Lote antiguo`,
-            detalle: `Ingresó hace ${diferenciaDias} días. Riesgo de marchitez.`
+            id: p.id || p._id,
+            mensaje: `${p.nombre} - Verificar lote`,
+            detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
           });
         }
       }
@@ -130,7 +176,7 @@ export default function App() {
     return alertas;
   };
 
-  // Filtrado avanzado por barra de búsqueda y botones de categoría
+  // Filtrado
   const productosFiltrados = productos.filter(p => {
     const cumpleCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
     const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
@@ -179,7 +225,6 @@ export default function App() {
 
       {menuOpen && <div onClick={() => setMenuOpen(false)} className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-30 transition-all" />}
 
-      {/* 🛠️ MENÚ LATERAL FIJO */}
       <aside className="menu-lateral-adaptable w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl inset-y-0 left-0 transition-transform duration-300 ease-in-out flex-shrink-0">
         <div className="p-8 pt-20 md:pt-8">
           <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">Floristería</h1>
@@ -207,10 +252,8 @@ export default function App() {
         </div>
       </aside>
 
-      {/* 🖥️ VISTA DINÁMICA DE CONTENIDO */}
       <main className="contenido-principal flex-1 p-6 md:p-10 overflow-y-auto w-full">
         
-        {/* --- PESTAÑA DE INICIO --- */}
         {activeTab === 'inicio' && (
           <div>
             <header className="mb-8">
@@ -259,7 +302,7 @@ export default function App() {
                   {stats.pedidosLista.length > 0 ? stats.pedidosLista.map((p, i) => (
                     <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-2">
                       <div>
-                        <p className="text-[9px] font-black text-gray-300 uppercase">#{String(p.id).substring(0,5)}</p>
+                        <p className="text-[9px] font-black text-gray-300 uppercase">#{String(p.id || p._id).substring(0,5)}</p>
                         <p className="text-sm font-black text-gray-700">{p.cliente}</p>
                       </div>
                       <p className="text-sm font-black text-emerald-600">{formatCOP(p.total)}</p>
@@ -271,10 +314,9 @@ export default function App() {
           </div>
         )}
 
-        {/* --- 📦 PESTAÑA DE INVENTARIO DISRUPTIVA (TU IDEA) --- */}
+        {/* --- 📦 PESTAÑA DE INVENTARIO CONECTADO --- */}
         {activeTab === 'inventario' && (
           <div>
-            {/* Cabecera Avanzada de Filtros y Búsqueda */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
@@ -299,25 +341,25 @@ export default function App() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-64 shadow-xs"
                 />
-                <button onClick={() => setShowModal(true)} className="bg-[#f06292] hover:bg-[#ec407a] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex-shrink-0">
+                <button onClick={() => setShowModal(true)} className="bg-[#f06292] hover:bg-[#ec407a] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0">
                   + Añadir Producto
                 </button>
               </div>
             </div>
 
-            {/* Layout de Rejilla de Tarjetas + Panel de Frescura Lateral */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
-              {/* Contenedor de las Tarjetas de Flores */}
               <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {productosFiltrados.map((prod) => {
+                {productosFiltrados.length > 0 ? productosFiltrados.map((prod) => {
                   let badgeColor = 'bg-emerald-500';
                   let badgeText = 'Disponible';
                   if (prod.stock === 0) { badgeColor = 'bg-gray-400'; badgeText = 'Agotado'; }
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
+                  const prodId = prod._id || prod.id;
+
                   return (
-                    <div key={prod.id} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                    <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
                       <div className="relative h-44 bg-gray-100">
                         <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover" />
                         <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
@@ -335,17 +377,20 @@ export default function App() {
                         <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-50">
                           <span className="text-xl font-black text-[#1b4332]">{formatCOP(prod.precio)}</span>
                           <div className="flex gap-2">
-                            <button className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-all">✏️ Editar</button>
-                            <button onClick={() => handleEliminarProducto(prod.id)} className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all">🗑️ Eliminar</button>
+                            <button onClick={() => handleEliminarProducto(prodId)} className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all">🗑️ Eliminar</button>
                           </div>
                         </div>
                       </div>
                     </div>
                   );
-                })}
+                }) : (
+                  <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
+                    <p className="text-gray-400 font-bold text-sm">Tu inventario está vacío.</p>
+                    <p className="text-gray-300 text-xs mt-1">Usa el botón "+ Añadir Producto" para registrar tus flores reales.</p>
+                  </div>
+                )}
               </div>
 
-              {/* Panel de Alertas de Frescura (Automatizado de tu idea) */}
               <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-xs h-fit space-y-4">
                 <h4 className="font-black text-[#1b4332] text-xs uppercase tracking-widest flex items-center gap-2">
                   ⚠️ Alertas de Frescura
@@ -354,17 +399,14 @@ export default function App() {
                   {obtenerAlertasFrescura().length > 0 ? obtenerAlertasFrescura().map((alerta) => (
                     <div key={alerta.id} className="bg-orange-50/70 p-4 rounded-2xl border border-orange-100 text-xs">
                       <p className="font-black text-orange-700 mb-1">🔸 {alerta.mensaje}</p>
-                      <p className="text-gray-500 font-semibold leading-snug">{alerta.detalles || alerta.detalle}</p>
+                      <p className="text-gray-500 font-semibold leading-snug">{alerta.detalle}</p>
                     </div>
                   )) : (
                     <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 text-xs">
                       <p className="font-black text-emerald-700">✅ Todo Fresco</p>
-                      <p className="text-gray-400 font-medium mt-1">Ninguna flor supera el tiempo de maduración crítico.</p>
+                      <p className="text-gray-400 font-medium mt-1">Ninguna flor supera el tiempo crítico en vitrina.</p>
                     </div>
                   )}
-                  <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 text-[10px] text-blue-700 font-bold">
-                    💡 Sugerencia: Los lotes antiguos pueden usarse para ramos mixtos en descuento de fin de semana.
-                  </div>
                 </div>
               </div>
 
@@ -374,10 +416,10 @@ export default function App() {
 
       </main>
 
-      {/* --- MODAL FORMULARIO: AÑADIR PRODUCTO PREMIUM --- */}
+      {/* --- MODAL FORMULARIO REAL --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative animate-scaleUp">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
             <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Agregar Nueva Flor</h3>
             
             <form onSubmit={handleAgregarProducto} className="space-y-4 text-xs font-bold text-gray-500">
@@ -387,7 +429,7 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Categoría de la Base de Datos *</label>
+                <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
                 <select className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200 bg-white">
                   <option value="Flores Sueltas">Flores Sueltas</option>
                   <option value="Ramos">Ramos</option>
@@ -409,11 +451,11 @@ export default function App() {
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Enlace / URL de la Foto (Color)</label>
-                <input type="url" placeholder="https://ejemplo.com/foto-flor.jpg" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="url" placeholder="https://images.unsplash.com/photo-..." className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Fecha de Ingreso (Para Frescura) *</label>
+                <label className="block mb-1 uppercase tracking-wider">Fecha de Ingreso *</label>
                 <input type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 

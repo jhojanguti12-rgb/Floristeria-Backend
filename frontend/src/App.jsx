@@ -3,6 +3,9 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid 
 } from 'recharts';
 
+// 📸 PASO A: Importación oficial de tu imagen guardada directamente en frontend/src/
+import fondoJardin from './fondo-jardin.jpg';
+
 // CONFIGURACIÓN DE TU BACKEND EN RENDER (Ajustada para conectar de forma directa)
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
@@ -83,9 +86,9 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
-        {/* 1. Fondo de pantalla usando tu imagen local de la carpeta public */}
+        {/* 1. Fondo de pantalla enlazado correctamente con la variable importada de src */}
         <div className="absolute inset-0 z-0" style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1558293842-c0ff3db86157?q=80&w=1920')",
+            backgroundImage: `url(${fondoJardin})`,
             backgroundSize: 'cover', 
             backgroundPosition: 'center'
           }}
@@ -104,14 +107,14 @@ export default function App() {
 
         <form className="relative z-10 bg-white/90 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center" onSubmit={handleLogin}>
           
-          {/* 2. EMOJI DE FLOR SALTARTÍN CON CONTROL DE VELOCIDAD */}
+          {/* 2. EMOJI DE FLOR SALTARINGO CON CONTROL DE VELOCIDAD */}
           <div className="flex justify-center mb-4 text-6xl animate-bounce-emoji select-none">
             🌸
           </div>
           
           <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
           
-          {/* 3. CAMBIO DE FRASE: Quitamos "Panel de Gestión" / "Panel Administrativo" */}
+          {/* 3. CAMBIO DE FRASE LIMPIA */}
           <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">
             ¡El jardín de tus sueños está a un paso!
           </p>

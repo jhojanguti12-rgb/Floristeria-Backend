@@ -125,19 +125,45 @@ export default function App() {
       </div>
     );
   }
-// --- VISTA DE DASHBOARD (REPARADO PARA PC Y CELULAR) ---
+// --- VISTA DE DASHBOARD CONTROLADA (BLINDADA PARA MÓVIL Y PC) ---
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col md:flex-row font-sans relative">
       
-      {/* 📱 BOTÓN HAMBURGUESA: Solo se ve en celulares (hidden en md) */}
+      {/* 💥 Estilos inyectados nativos para asegurar que el responsivo funcione al 100% */}
+      <style>{`
+        @media (max-width: 767px) {
+          .menu-lateral-adaptable {
+            position: fixed !important;
+            transform: ${menuOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
+            z-index: 40 !important;
+          }
+          .boton-hamburguesa {
+            display: block !important;
+          }
+          .contenido-principal {
+            padding-top: 5rem !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .menu-lateral-adaptable {
+            position: static !important;
+            transform: none !important;
+          }
+          .boton-hamburguesa {
+            display: none !important;
+          }
+        }
+      `}</style>
+      
+      {/* 📱 BOTÓN HAMBURGUESA */}
       <button 
         onClick={() => setMenuOpen(!menuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 bg-[#1b4332] text-white p-3 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xl"
+        className="boton-hamburguesa hidden fixed top-4 left-4 z-50 bg-[#1b4332] text-white p-3 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xl"
       >
         {menuOpen ? '✖️' : '☰'}
       </button>
 
-      {/* 📱 CAPA OSCURA DE FONDO: Solo se activa en celular cuando el menú está abierto */}
+      {/* 📱 CAPA OSCURA DE FONDO */}
       {menuOpen && (
         <div 
           onClick={() => setMenuOpen(false)} 
@@ -145,14 +171,9 @@ export default function App() {
         />
       )}
 
-      {/* 🛠️ MENÚ LATERAL: Fijo en PC (md:static) y Desplegable en Celular (fixed) */}
-      <aside className={`
-        fixed md:static inset-y-0 left-0 z-40
-        w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl
-        transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:transform-none
-        transition-transform duration-300 ease-in-out
-      `}>
-        <div className="p-8 pt-20 md:pt-8"> {/* Espacio extra arriba solo en celular por el botón */}
+      {/* 🛠️ MENÚ LATERAL */}
+      <aside className="menu-lateral-adaptable w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl inset-y-0 left-0 transition-transform duration-300 ease-in-out">
+        <div className="p-8 pt-20 md:pt-8">
           <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">Floristería</h1>
           <p className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Gestión Profesional</p>
         </div>
@@ -182,14 +203,14 @@ export default function App() {
         </div>
       </aside>
 
-      {/* 🖥️ CONTENIDO PRINCIPAL ADAPTADO A REFLUJO CELULAR Y PC */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto pt-20 md:pt-12">
+      {/* 🖥️ CONTENIDO PRINCIPAL */}
+      <main className="contenido-principal flex-1 p-6 md:p-12 overflow-y-auto md:pt-12">
         <header className="mb-8 md:mb-12">
           <h2 className="text-3xl md:text-5xl font-black text-[#1b4332] tracking-tighter">¡Bienvenido, {user.nombre}!</h2>
           <p className="text-gray-400 font-bold mt-1 md:mt-2">Resumen de hoy.</p>
         </header>
 
-        {/* Tarjetas de estadísticas en rejilla responsiva (1 columna en celular, 4 en PC) */}
+        {/* Tarjetas de estadísticas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
             <div className="bg-emerald-50 p-6 rounded-[2.5rem] border border-white shadow-sm">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Pedidos</p>
@@ -209,10 +230,8 @@ export default function App() {
             </div>
         </div>
 
-        {/* Sección inferior responsiva */}
+        {/* Sección inferior */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          
-          {/* Gráfico adaptable */}
           <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
              <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Ventas Semanales</h4>
             <div className="h-64 w-full">
@@ -233,7 +252,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Lista de Pedidos Recientes */}
           <div className="bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-gray-100">
             <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Pedidos Recientes</h4>
             <div className="space-y-6">
@@ -250,9 +268,8 @@ export default function App() {
               )) : <p className="text-center text-gray-400 text-sm font-bold py-10">No hay pedidos registrados</p>}
             </div>
           </div>
-
         </div>
       </main>
     </div>
   );
-  }
+}

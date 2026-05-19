@@ -5,7 +5,6 @@ import {
 
 import fondoJardin from './fondo-jardin.jpg';
 
-// CONFIGURACIÓN DE TU BACKEND EN RENDER
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
 const formatCOP = (val) => new Intl.NumberFormat('es-CO', { 
@@ -13,6 +12,23 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
   currency: 'COP', 
   minimumFractionDigits: 0 
 }).format(Number(val) || 0);
+
+// Diccionario inteligente de imágenes por defecto a color de alta calidad
+const obtenerImagenPorDefecto = (nombre = '', categoria = '') => {
+  const n = nombre.toLowerCase();
+  if (n.includes('ros')) return 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600';
+  if (n.includes('girasol')) return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=600';
+  if (n.includes('orqui') || n.includes('orch')) return 'https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?q=80&w=600';
+  if (n.includes('tulip')) return 'https://images.unsplash.com/photo-1520763185298-1b434c919102?q=80&w=600';
+  
+  // Por categoría si no coincide el nombre
+  if (categoria === 'Ramos') return 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=600';
+  if (categoria === 'Plantas') return 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=600';
+  if (categoria === 'Insumos') return 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?q=80&w=600';
+  
+  // Imagen comodín de flores variadas
+  return 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=600';
+};
 
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
@@ -27,14 +43,11 @@ export default function App() {
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
   });
 
-  // 🌟 CORREGIDO: El inventario ahora empieza vacío esperando los productos reales de tu base de datos
   const [productos, setProductos] = useState([]);
 
-  // --- FUNCIÓN PARA CARGAR DATOS DE INICIO Y PRODUCTOS ---
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
-      // 1. Cargar Estadísticas generales
       const resStats = await fetch(`${API_BASE_URL}/stats`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
@@ -49,7 +62,6 @@ export default function App() {
         });
       }
 
-      // 2. Cargar Productos reales desde la Base de Datos
       const resProd = await fetch(`${API_BASE_URL}/productos`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
@@ -58,7 +70,7 @@ export default function App() {
         setProductos(Array.isArray(listaProd) ? listaProd : []);
       }
     } catch (e) {
-      console.error("Error cargando datos del servidor:", e);
+      console.error("Error cargando datos:", e);
     }
   }, [user]);
 
@@ -66,7 +78,6 @@ export default function App() {
     if (user) fetchData();
   }, [user, fetchData]);
 
-  // --- LÓGICA DE LOGIN ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -94,15 +105,23 @@ export default function App() {
     }
   };
 
-  // --- LÓGICA PARA AÑADIR PRODUCTO REAL AL BACKEND ---
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
+    const nombreInput = e.target[0].value;
+    const categoriaInput = e.target[1].value;
+    let imagenInput = e.target[4].value;
+
+    // Si no es un enlace HTTP válido, le inyectamos una foto real a color automáticamente
+    if (!imagenInput.startsWith('http://') && !imagenInput.startsWith('https://')) {
+      imagenInput = obtenerImagenPorDefecto(nombreInput, categoriaInput);
+    }
+
     const nuevoProducto = {
-      nombre: e.target[0].value,
-      categoria: e.target[1].value,
+      nombre: nombreInput,
+      categoria: categoriaInput,
       stock: Number(e.target[2].value),
       precio: Number(e.target[3].value),
-      imagen: e.target[4].value || 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=500',
+      imagen: imagenInput,
       fechaIngreso: e.target[5].value
     };
 
@@ -117,7 +136,6 @@ export default function App() {
       });
 
       if (res.ok) {
-        // Si el backend lo guarda con éxito, recargamos la lista actualizada
         fetchData();
         setShowModal(false);
       } else {
@@ -125,13 +143,12 @@ export default function App() {
         alert(errData.mensaje || "Error al guardar el producto");
       }
     } catch (error) {
-      alert("Error de conexión al intentar añadir el producto.");
+      alert("Error de conexión al guardar.");
     }
   };
 
-  // --- 🌟 LÓGICA CONECTADA PARA ELIMINAR DE LA BASE DE DATOS REAL ---
   const handleEliminarProducto = async (id) => {
-    if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente de la base de datos?")) {
+    if (window.confirm("¿Seguro que deseas eliminar este producto?")) {
       try {
         const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
           method: 'DELETE',
@@ -140,21 +157,16 @@ export default function App() {
             'Content-Type': 'application/json'
           }
         });
-
         if (res.ok) {
-          // Si el servidor lo borró correctamente, actualizamos el estado visual de inmediato
-          setProductos(productos.filter(p => p.id !== id || p._id !== id));
-          fetchData(); // Sincroniza métricas del inicio
-        } else {
-          alert("El servidor no permitió borrar el producto. Revisa los permisos.");
+          setProductos(productos.filter(p => p._id !== id && p.id !== id));
+          fetchData();
         }
       } catch (error) {
-        alert("Error de conexión al intentar eliminar el producto.");
+        alert("Error al eliminar.");
       }
     }
   };
 
-  // Alertas de frescura basadas en la fecha de ingreso
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
@@ -166,9 +178,9 @@ export default function App() {
         const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
         if (diferenciaDias >= 4) {
           alertas.push({
-            id: p.id || p._id,
-            mensaje: `${p.nombre} - Verificar lote`,
-            detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
+            id: p._id || p.id,
+            mensaje: `${p.nombre} - Lote antiguo`,
+            detalle: `Lleva ${diferenciaDias} días en vitrina. Recomendable revisar frescura.`
           });
         }
       }
@@ -176,7 +188,6 @@ export default function App() {
     return alertas;
   };
 
-  // Filtrado
   const productosFiltrados = productos.filter(p => {
     const cumpleCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
     const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
@@ -187,15 +198,14 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
         <div className="absolute inset-0 z-0" style={{ backgroundImage: `url(${fondoJardin})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-        <style>{`@keyframes bE { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(20px); } } .animate-bounce-emoji { animation: bE 2s infinite ease-in-out; }`}</style>
         <form className="relative z-10 bg-white/90 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center" onSubmit={handleLogin}>
-          <div className="flex justify-center mb-4 text-6xl animate-bounce-emoji select-none">🌸</div>
+          <div className="flex justify-center mb-4 text-6xl select-none">🌸</div>
           <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
           <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">¡El jardín de tus sueños está a un paso!</p>
           <div className="space-y-4">
             <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
             <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
-            <button disabled={loading} className="w-full bg-[#d81b60] text-white p-5 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#ad1457] hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:bg-gray-400">
+            <button disabled={loading} className="w-full bg-[#d81b60] text-white p-5 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#ad1457] mt-4 disabled:bg-gray-400">
               {loading ? 'Entrando...' : 'Entrar al Jardín'}
             </button>
           </div>
@@ -314,7 +324,6 @@ export default function App() {
           </div>
         )}
 
-        {/* --- 📦 PESTAÑA DE INVENTARIO CONECTADO --- */}
         {activeTab === 'inventario' && (
           <div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -357,11 +366,24 @@ export default function App() {
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
                   const prodId = prod._id || prod.id;
+                  
+                  // 🌟 CONTROL EXTRA: Si la URL guardada en base de datos es inválida, se calcula el fallback visual en caliente
+                  const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
+                    ? prod.imagen 
+                    : obtenerImagenPorDefecto(prod.nombre, prod.categoria);
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-                      <div className="relative h-44 bg-gray-100">
-                        <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover" />
+                      <div className="relative h-44 bg-gray-50">
+                        <img 
+                          src={imagenSrc} 
+                          alt={prod.nombre} 
+                          className="w-full h-full object-cover transition-opacity duration-300"
+                          onError={(e) => { 
+                            // Respaldo final si el link de internet se cae o está roto
+                            e.target.src = obtenerImagenPorDefecto(prod.nombre, prod.categoria); 
+                          }} 
+                        />
                         <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
                           [ {badgeText} ]
                         </span>
@@ -386,7 +408,6 @@ export default function App() {
                 }) : (
                   <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
                     <p className="text-gray-400 font-bold text-sm">Tu inventario está vacío.</p>
-                    <p className="text-gray-300 text-xs mt-1">Usa el botón "+ Añadir Producto" para registrar tus flores reales.</p>
                   </div>
                 )}
               </div>
@@ -416,7 +437,7 @@ export default function App() {
 
       </main>
 
-      {/* --- MODAL FORMULARIO REAL --- */}
+      {/* --- MODAL FORMULARIO --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
@@ -451,7 +472,7 @@ export default function App() {
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Enlace / URL de la Foto (Color)</label>
-                <input type="url" placeholder="https://images.unsplash.com/photo-..." className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="text" placeholder="Pega un link de internet o escribe ej: Girasol" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div>

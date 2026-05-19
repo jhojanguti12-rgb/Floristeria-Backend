@@ -27,9 +27,10 @@ app.use(helmet({
     contentSecurityPolicy: false, 
 }));
 
+// Configuración de CORS total para evitar bloqueos con Render
 app.use(cors({
     origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -43,24 +44,25 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // --- 3. RUTAS DE LA API ---
 
-// Ruta de Salud
+// Ruta de Salud (Crucial para que Render sepa que el servicio está activo)
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Servidor floreciendo 🌸' }));
 
 /** * --- REDIRECCIONES DE COMPATIBILIDAD ---
- * Esto asegura que si el Frontend busca la vieja ruta /api/resumen,
- * el servidor lo redirija automáticamente a la nueva /api/stats.
  */
 app.get('/api/resumen', (req, res) => res.redirect(301, '/api/stats'));
 app.get('/api/stats/resumen', (req, res) => res.redirect(301, '/api/stats'));
 
-// Definición de rutas principales
+// Definición de rutas públicas/principales
 app.use('/api/usuarios', usuarioRouter); 
 app.use('/api/flores', flowerRouter); 
 app.use('/api/productos', productoRouter); 
 app.use('/api/categorias', categoriaRouter); 
-app.use('/api/stats', statsRouter); // Esta es la ruta que corregimos en el router
 
-// Rutas protegidas
+// Si tus estadísticas necesitan protección, puedes agregar "verificarToken" aquí.
+// Por ahora la dejamos directa como la llama tu Frontend.
+app.use('/api/stats', statsRouter); 
+
+// Rutas protegidas (Requieren Token de Administrador)
 app.use('/api/pedidos', verificarToken, pedidoRouter);
 app.use('/api/clientes', verificarToken, clienteRouter);
 app.use('/api/pagos', verificarToken, pagoRouter);
@@ -68,9 +70,6 @@ app.use('/api/entregas', verificarToken, entregaRouter);
 app.use('/api/proveedores', verificarToken, proveedorRouter);
 
 // --- 4. CONFIGURACIÓN PARA EL FRONTEND (SPA) ---
-/** * Captura cualquier ruta que no sea de la API y sirve el index.html.
- * Es vital para que React/Vite maneje el enrutamiento interno.
- */
 app.use((req, res, next) => {
     if (req.path.startsWith('/api')) {
         return next();

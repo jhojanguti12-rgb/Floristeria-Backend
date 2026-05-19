@@ -85,7 +85,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
         {/* 1. Fondo de pantalla usando tu imagen local de la carpeta public */}
         <div className="absolute inset-0 z-0" style={{
-            backgroundImage: "url('/fondo-jardin.jpg')",
+            backgroundImage: "url('https://images.unsplash.com/photo-1558293842-c0ff3db86157?q=80&w=1920')",
             backgroundSize: 'cover', 
             backgroundPosition: 'center'
           }}

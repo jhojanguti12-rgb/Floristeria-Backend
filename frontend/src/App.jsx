@@ -125,55 +125,46 @@ export default function App() {
       </div>
     );
   }
-// --- VISTA DE DASHBOARD CONTROLADA (BLINDADA PARA MÓVIL Y PC) ---
+// --- VISTA DE DASHBOARD 100% COLAPSABLE EN TODO TAMAÑO ---
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col md:flex-row font-sans relative">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col font-sans relative overflow-x-hidden">
       
-      {/* 💥 Estilos inyectados nativos para asegurar que el responsivo funcione al 100% */}
+      {/* 💥 Estilos unificados: Ahora PC y Celular se comportan exactamente igual */}
       <style>{`
-        @media (max-width: 767px) {
-          .menu-lateral-adaptable {
-            position: fixed !important;
-            transform: ${menuOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
-            z-index: 40 !important;
-          }
-          .boton-hamburguesa {
-            display: block !important;
-          }
-          .contenido-principal {
-            padding-top: 5rem !important;
-          }
+        .menu-lateral-adaptable {
+          position: fixed !important;
+          transform: ${menuOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
+          z-index: 40 !important;
+          height: 100vh !important;
         }
-        @media (min-width: 768px) {
-          .menu-lateral-adaptable {
-            position: static !important;
-            transform: none !important;
-          }
-          .boton-hamburguesa {
-            display: none !important;
-          }
+        .boton-hamburguesa {
+          display: block !important;
+        }
+        .contenido-principal {
+          padding-top: 5rem !important;
+          width: 100% !important;
         }
       `}</style>
       
-      {/* 📱 BOTÓN HAMBURGUESA */}
+      {/* ☰ BOTÓN HAMBURGUESA: Ahora SIEMPRE visible arriba a la izquierda */}
       <button 
         onClick={() => setMenuOpen(!menuOpen)}
-        className="boton-hamburguesa hidden fixed top-4 left-4 z-50 bg-[#1b4332] text-white p-3 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xl"
+        className="boton-hamburguesa fixed top-4 left-4 z-50 bg-[#1b4332] text-white p-3 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xl"
       >
         {menuOpen ? '✖️' : '☰'}
       </button>
 
-      {/* 📱 CAPA OSCURA DE FONDO */}
+      {/* 📱 CAPA OSCURA DE FONDO: Se activa en cualquier pantalla si el menú está abierto */}
       {menuOpen && (
         <div 
           onClick={() => setMenuOpen(false)} 
-          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-30 transition-all"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 transition-all"
         />
       )}
 
-      {/* 🛠️ MENÚ LATERAL */}
-      <aside className="menu-lateral-adaptable w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl inset-y-0 left-0 transition-transform duration-300 ease-in-out">
-        <div className="p-8 pt-20 md:pt-8">
+      {/* 🛠️ MENÚ LATERAL: Siempre flotante y ocultable */}
+      <aside className="menu-lateral-adaptable w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl inset-y-0 left-0 transition-transform duration-300 ease-in-out flex-shrink-0">
+        <div className="p-8 pt-20">
           <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">Floristería</h1>
           <p className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Gestión Profesional</p>
         </div>
@@ -203,8 +194,8 @@ export default function App() {
         </div>
       </aside>
 
-      {/* 🖥️ CONTENIDO PRINCIPAL */}
-      <main className="contenido-principal flex-1 p-6 md:p-12 overflow-y-auto md:pt-12">
+      {/* 🖥️ CONTENIDO PRINCIPAL: Ocupa toda la pantalla por defecto */}
+      <main className="contenido-principal flex-1 p-6 md:p-12 overflow-y-auto w-full md:pl-16">
         <header className="mb-8 md:mb-12">
           <h2 className="text-3xl md:text-5xl font-black text-[#1b4332] tracking-tighter">¡Bienvenido, {user.nombre}!</h2>
           <p className="text-gray-400 font-bold mt-1 md:mt-2">Resumen de hoy.</p>
@@ -233,7 +224,7 @@ export default function App() {
         {/* Sección inferior */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
-             <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Ventas Semanales</h4>
+            <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Ventas Semanales</h4>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[{d:'L',v:0}, {d:'M',v:0}, {d:'X',v:0}, {d:'J',v:0}, {d:'V',v:0}, {d:'S',v:0}, {d:'Hoy',v:stats.ventasTotal}]}>

@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid 
 } from 'recharts';
 
-// 📸 PASO A: Importación oficial de tu imagen guardada directamente en frontend/src/
+// PASO A: Importación oficial de tu imagen guardada directamente en frontend/src/
 import fondoJardin from './fondo-jardin.jpg';
 
 // CONFIGURACIÓN DE TU BACKEND EN RENDER (Ajustada para conectar de forma directa)
@@ -21,6 +21,9 @@ export default function App() {
   const [stats, setStats] = useState({ 
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
   });
+
+  // 📱 Estado nuevo para controlar el menú desplegable en celulares
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // --- FUNCIÓN PARA CARGAR DATOS ---
   const fetchData = useCallback(async () => {
@@ -82,11 +85,10 @@ export default function App() {
     }
   };
 
-  // --- VISTA DE LOGIN MÁGICO MODIFICADA ---
+  // --- VISTA DE LOGIN MÁGICO ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
-        {/* 1. Fondo de pantalla enlazado correctamente con la variable importada de src */}
         <div className="absolute inset-0 z-0" style={{
             backgroundImage: `url(${fondoJardin})`,
             backgroundSize: 'cover', 
@@ -94,7 +96,6 @@ export default function App() {
           }}
         />
         
-        {/* Estilos inyectados rápidamente solo para animar el rebote del Emoji */}
         <style>{`
           @keyframes bounceEmoji {
             0%, 100% { transform: translateY(0); }
@@ -106,19 +107,13 @@ export default function App() {
         `}</style>
 
         <form className="relative z-10 bg-white/90 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center" onSubmit={handleLogin}>
-          
-          {/* 2. EMOJI DE FLOR SALTARINGO CON CONTROL DE VELOCIDAD */}
           <div className="flex justify-center mb-4 text-6xl animate-bounce-emoji select-none">
             🌸
           </div>
-          
           <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
-          
-          {/* 3. CAMBIO DE FRASE LIMPIA */}
           <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">
             ¡El jardín de tus sueños está a un paso!
           </p>
-          
           <div className="space-y-4">
             <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
             <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 transition-all font-semibold" />
@@ -131,14 +126,38 @@ export default function App() {
     );
   }
 
-  // --- VISTA DE DASHBOARD ---
+  // --- VISTA DE DASHBOARD (RESPONSIVO MÓVIL) ---
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex font-sans">
-      <aside className="w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl">
-        <div className="p-8">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col md:flex-row font-sans relative">
+      
+      {/* 📱 BOTÓN HAMBURGUESA: Solo se ve en celulares (hidden en md) */}
+      <button 
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 bg-[#1b4332] text-white p-3 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xl"
+      >
+        {menuOpen ? '✖️' : '☰'}
+      </button>
+
+      {/* 📱 CAPA OSCURA DE FONDO: Bloquea el resto de la pantalla en celular cuando el menú está abierto */}
+      {menuOpen && (
+        <div 
+          onClick={() => setMenuOpen(false)} 
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-30 transition-all"
+        />
+      )}
+
+      {/* 🛠️ MENÚ LATERAL MEJORADO (Responsivo dinámico) */}
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-40
+        w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl
+        transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+        transition-transform duration-300 ease-in-out
+      `}>
+        <div className="p-8 pt-20 md:pt-8"> {/* Más espacio arriba en celular por el botón */}
           <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">Floristería</h1>
           <p className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Gestión Profesional</p>
         </div>
+        
         <nav className="flex-1 px-4 space-y-2 mt-4">
           <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/10 cursor-pointer">
             <span className="text-lg">🏠</span> <span className="font-bold">Inicio</span>
@@ -147,6 +166,7 @@ export default function App() {
             <span className="text-lg">📦</span> <span className="font-bold">Inventario</span>
           </div>
         </nav>
+        
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
             <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center font-black text-white">
@@ -163,13 +183,15 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-        <header className="mb-12">
-          <h2 className="text-5xl font-black text-[#1b4332] tracking-tighter">¡Bienvenido, {user.nombre}!</h2>
-          <p className="text-gray-400 font-bold mt-2">Resumen de hoy.</p>
+      {/* 🖥️ CONTENIDO PRINCIPAL ADAPTADO A REFLUJO CELULAR */}
+      <main className="flex-1 p-6 md:p-12 overflow-y-auto pt-20 md:pt-12">
+        <header className="mb-8 md:mb-12">
+          <h2 className="text-3xl md:text-5xl font-black text-[#1b4332] tracking-tighter">¡Bienvenido, {user.nombre}!</h2>
+          <p className="text-gray-400 font-bold mt-1 md:mt-2">Resumen de hoy.</p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        {/* Tarjetas de estadísticas en rejilla responsiva (1 columna en celular, 2 en tablet, 4 en PC) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
             <div className="bg-emerald-50 p-6 rounded-[2.5rem] border border-white shadow-sm">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Pedidos</p>
               <h3 className="text-2xl font-black text-emerald-600">{stats.pedidosCount}</h3>
@@ -188,10 +210,13 @@ export default function App() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
-             <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-8">Ventas Semanales</h4>
-            <div className="h-64">
+        {/* Sección inferior responsiva (1 columna en celular, cambia a filas en PC) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          
+          {/* Gráfico adaptable */}
+          <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
+             <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Ventas Semanales</h4>
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[{d:'L',v:0}, {d:'M',v:0}, {d:'X',v:0}, {d:'J',v:0}, {d:'V',v:0}, {d:'S',v:0}, {d:'Hoy',v:stats.ventasTotal}]}>
                   <defs>
@@ -209,8 +234,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
-            <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-8">Pedidos Recientes</h4>
+          {/* Lista de Pedidos Recientes */}
+          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-gray-100">
+            <h4 className="font-black text-[#1b4332] uppercase text-xs tracking-widest mb-6 md:mb-8">Pedidos Recientes</h4>
             <div className="space-y-6">
               {stats.pedidosLista.length > 0 ? stats.pedidosLista.map((p, i) => (
                 <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-4">
@@ -225,6 +251,7 @@ export default function App() {
               )) : <p className="text-center text-gray-400 text-sm font-bold py-10">No hay pedidos registrados</p>}
             </div>
           </div>
+
         </div>
       </main>
     </div>

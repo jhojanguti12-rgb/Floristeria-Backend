@@ -125,8 +125,7 @@ export default function App() {
       </div>
     );
   }
-
-  // --- VISTA DE DASHBOARD (RESPONSIVO MÓVIL) ---
+// --- VISTA DE DASHBOARD (REPARADO PARA PC Y CELULAR) ---
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col md:flex-row font-sans relative">
       
@@ -138,7 +137,7 @@ export default function App() {
         {menuOpen ? '✖️' : '☰'}
       </button>
 
-      {/* 📱 CAPA OSCURA DE FONDO: Bloquea el resto de la pantalla en celular cuando el menú está abierto */}
+      {/* 📱 CAPA OSCURA DE FONDO: Solo se activa en celular cuando el menú está abierto */}
       {menuOpen && (
         <div 
           onClick={() => setMenuOpen(false)} 
@@ -146,14 +145,14 @@ export default function App() {
         />
       )}
 
-      {/* 🛠️ MENÚ LATERAL MEJORADO (Responsivo dinámico) */}
+      {/* 🛠️ MENÚ LATERAL: Fijo en PC (md:static) y Desplegable en Celular (fixed) */}
       <aside className={`
         fixed md:static inset-y-0 left-0 z-40
         w-64 bg-[#1b4332] text-white flex flex-col shadow-2xl
-        transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+        transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:transform-none
         transition-transform duration-300 ease-in-out
       `}>
-        <div className="p-8 pt-20 md:pt-8"> {/* Más espacio arriba en celular por el botón */}
+        <div className="p-8 pt-20 md:pt-8"> {/* Espacio extra arriba solo en celular por el botón */}
           <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">Floristería</h1>
           <p className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Gestión Profesional</p>
         </div>
@@ -183,14 +182,14 @@ export default function App() {
         </div>
       </aside>
 
-      {/* 🖥️ CONTENIDO PRINCIPAL ADAPTADO A REFLUJO CELULAR */}
+      {/* 🖥️ CONTENIDO PRINCIPAL ADAPTADO A REFLUJO CELULAR Y PC */}
       <main className="flex-1 p-6 md:p-12 overflow-y-auto pt-20 md:pt-12">
         <header className="mb-8 md:mb-12">
           <h2 className="text-3xl md:text-5xl font-black text-[#1b4332] tracking-tighter">¡Bienvenido, {user.nombre}!</h2>
           <p className="text-gray-400 font-bold mt-1 md:mt-2">Resumen de hoy.</p>
         </header>
 
-        {/* Tarjetas de estadísticas en rejilla responsiva (1 columna en celular, 2 en tablet, 4 en PC) */}
+        {/* Tarjetas de estadísticas en rejilla responsiva (1 columna en celular, 4 en PC) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
             <div className="bg-emerald-50 p-6 rounded-[2.5rem] border border-white shadow-sm">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Pedidos</p>
@@ -210,7 +209,7 @@ export default function App() {
             </div>
         </div>
 
-        {/* Sección inferior responsiva (1 columna en celular, cambia a filas en PC) */}
+        {/* Sección inferior responsiva */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           
           {/* Gráfico adaptable */}
@@ -256,4 +255,4 @@ export default function App() {
       </main>
     </div>
   );
-}
+  }

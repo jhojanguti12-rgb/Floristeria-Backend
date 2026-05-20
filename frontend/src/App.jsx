@@ -13,27 +13,15 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0 
 }).format(Number(val) || 0);
 
-// 🌟 MOTOR DE DETECCIÓN VISUAL MEJORADO (Ignora tildes, mayúsculas y espacios)
+// MOTOR DE DETECCIÓN VISUAL POR NOMBRE
 const obtenerImagenPorDefecto = (nombre = '', categoria = '') => {
-  // Limpiamos el texto: quitamos tildes, mayúsculas y espacios extras
-  const n = nombre
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // Borra tildes de forma definitiva
-
+  const n = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (n.includes('ros')) return 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600';
   if (n.includes('girasol')) return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=600';
   if (n.includes('orqui') || n.includes('orch')) return 'https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?q=80&w=600';
   if (n.includes('tulip')) return 'https://images.unsplash.com/photo-1520763185298-1b434c919102?q=80&w=600';
   if (n.includes('clavel')) return 'https://images.unsplash.com/photo-1587334206596-f330689b9d36?q=80&w=600';
   if (n.includes('margarita')) return 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=600';
-  
-  // Si no coincide el nombre de la flor, usamos fotos premium por categoría
-  if (categoria === 'Ramos') return 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=600';
-  if (categoria === 'Plantas') return 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=600';
-  if (categoria === 'Insumos') return 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?q=80&w=600';
-  
-  // Imagen comodín de flores variadas por si acaso
   return 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=600';
 };
 
@@ -51,6 +39,9 @@ export default function App() {
   });
 
   const [productos, setProductos] = useState([]);
+
+  // 🌟 EXTRAER CATEGORÍAS REALES: Mapea tus productos y saca una lista única de lo que tú guardaste
+  const categoriasExistentes = ['Todas', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
 
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
@@ -115,10 +106,9 @@ export default function App() {
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     const nombreInput = e.target[0].value;
-    const categoriaInput = e.target[1].value;
+    const categoriaInput = e.target[1].value; // Ahora lee el campo de texto libre
     let imagenInput = e.target[4].value;
 
-    // Si no es un enlace real de internet, forzamos la asignación de imagen premium
     if (!imagenInput.startsWith('http://') && !imagenInput.startsWith('https://')) {
       imagenInput = obtenerImagenPorDefecto(nombreInput, categoriaInput);
     }
@@ -166,6 +156,8 @@ export default function App() {
         });
         if (res.ok) {
           setProductos(productos.filter(p => p._id !== id && p.id !== id));
+          // Si eliminas el último producto de una categoría, volvemos a 'Todas'
+          setFiltroCategoria('Todas');
           fetchData();
         }
       } catch (error) {
@@ -178,18 +170,16 @@ export default function App() {
     const alertas = [];
     const hoy = new Date();
     productos.forEach(p => {
-      if (p.categoria === 'Flores Sueltas' || p.categoria === 'Ramos') {
-        const fechaRef = p.fechaIngreso || p.createdAt;
-        if (!fechaRef) return;
-        const ingreso = new Date(fechaRef);
-        const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
-        if (diferenciaDias >= 4) {
-          alertas.push({
-            id: p._id || p.id,
-            mensaje: `${p.nombre} - Verificar lote`,
-            detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
-          });
-        }
+      const fechaRef = p.fechaIngreso || p.createdAt;
+      if (!fechaRef) return;
+      const ingreso = new Date(fechaRef);
+      const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
+      if (diferenciaDias >= 4) {
+        alertas.push({
+          id: p._id || p.id,
+          mensaje: `${p.nombre} - Verificar lote`,
+          detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
+        });
       }
     });
     return alertas;
@@ -336,8 +326,10 @@ export default function App() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
+                
+                {/* 🌟 BOTONES DE CATEGORÍAS TOTALMENTE DINÁMICOS */}
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {['Todas', 'Flores Sueltas', 'Ramos', 'Plantas', 'Insumos'].map((cat) => (
+                  {categoriasExistentes.map((cat) => (
                     <button 
                       key={cat} 
                       onClick={() => setFiltroCategoria(cat)}
@@ -374,7 +366,6 @@ export default function App() {
 
                   const prodId = prod._id || prod.id;
                   
-                  // 🌟 MEJORA RADICAL: Si el campo 'imagen' no es un link real web, calculamos la foto a color procesando el NOMBRE del producto directamente
                   const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
                     ? prod.imagen 
                     : obtenerImagenPorDefecto(prod.nombre, prod.categoria);
@@ -413,7 +404,7 @@ export default function App() {
                   );
                 }) : (
                   <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-400 font-bold text-sm">Tu inventario está vacío.</p>
+                    <p className="text-gray-400 font-bold text-sm">No hay productos en esta categoría.</p>
                   </div>
                 )}
               </div>
@@ -443,7 +434,7 @@ export default function App() {
 
       </main>
 
-      {/* --- MODAL FORMULARIO --- */}
+      {/* --- MODAL FORMULARIO TOTALMENTE LIBRE --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
@@ -455,14 +446,10 @@ export default function App() {
                 <input type="text" required placeholder="Ej. Rosa Azul o Girasol Gigante" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
+              {/* 🌟 CORREGIDO: Campo de texto libre para que escribas la categoría que tú quieras */}
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
-                <select className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200 bg-white">
-                  <option value="Flores Sueltas">Flores Sueltas</option>
-                  <option value="Ramos">Ramos</option>
-                  <option value="Plantas">Plantas</option>
-                  <option value="Insumos">Insumos</option>
-                </select>
+                <input type="text" required placeholder="Ej. Exóticas, Ramos Premium, Follaje..." className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

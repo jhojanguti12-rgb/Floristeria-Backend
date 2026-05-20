@@ -169,12 +169,14 @@ const handleEliminarProducto = async (idTarget) => {
         });
 
         if (res.ok) {
-          // 🚀 LA MAGIA: Esto saca la flor de la pantalla AL INSTANTE sin pedir F5
-          setProductos(prev => prev.filter(p => p._id !== idTarget && p.id !== idTarget));
+          // 🚀 CORRECCIÓN COMPATIBLE CON MYSQL: 
+          // Forzamos la comparación usando solo el 'id' numérico real de tu base de datos
+          setProductos(prev => prev.filter(p => Number(p.id) !== Number(idTarget)));
           setFiltroCategoria('Todas');
-          fetchData(); // Recarga las estadísticas del inicio
+          fetchData(); // Refresca las estadísticas en el inicio automáticamente
         } else {
-          // Si el backend aplicó el borrado lógico (stock 0) por seguridad de historial, también lo refrescamos
+          // Si el backend no pudo borrar por completo (por ejemplo, por registros amarrados)
+          // pero modificó el stock a 0, refrescamos el catálogo desde el servidor
           fetchData();
         }
       } catch (error) {

@@ -39,8 +39,11 @@ export default function App() {
   });
 
   const [productos, setProductos] = useState([]);
+  
+  // 🌟 NUEVO ESTADO: Guarda temporalmente la foto que elijas desde Descargas
+  const [imagenArchivo, setImagenArchivo] = useState(null);
 
-// 🌟 EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
+  // 🌟 EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
   const categoriasExistentes = [
     'Todas', 
     ...new Set(
@@ -50,6 +53,7 @@ export default function App() {
         .filter(cat => cat.length > 0) // Ignora categorías en blanco
     )
   ];
+
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
@@ -85,7 +89,7 @@ export default function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    loading(true);
     const email = e.target[0].value;
     const password = e.target[1].value;
 
@@ -110,36 +114,41 @@ export default function App() {
     }
   };
 
+  // 🌟 FUNCIÓN REESTRUCTURADA PARA ENVIAR LA FOTO REAL DE DESCARGAS COMO FORMDATA
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     const nombreInput = e.target[0].value;
-    const categoriaInput = e.target[1].value; 
-    let imagenInput = e.target[4].value;
+    const categoriaInput = e.target[1].value;
+    const stockInput = e.target[2].value;
+    const precioInput = e.target[3].value;
+    const fechaIngresoInput = e.target[5].value;
 
-    if (!imagenInput.startsWith('http://') && !imagenInput.startsWith('https://')) {
-      imagenInput = obtenerImagenPorDefecto(nombreInput, categoriaInput);
+    // Preparamos el empaque FormData especial para archivos mixtos
+    const formData = new FormData();
+    formData.append('nombre', nombreInput);
+    formData.append('categoria', categoriaInput);
+    formData.append('stock', Number(stockInput));
+    formData.append('precio', Number(precioInput));
+    formData.append('fechaIngreso', fechaIngresoInput);
+
+    // Si seleccionaste un archivo real en el botón, lo adjuntamos
+    if (imagenArchivo) {
+      formData.append('foto', imagenArchivo);
     }
 
-    const nuevoProducto = {
-      nombre: nombreInput,
-      categoria: categoriaInput,
-      stock: Number(e.target[2].value),
-      precio: Number(e.target[3].value),
-      imagen: imagenInput,
-      fechaIngreso: e.target[5].value
-    };
-
     try {
-      const res = await fetch(`${API_BASE_URL}/productos`, {
+      // 🚀 Apuntamos a la ruta experta de creación del FlowerRouter que revisamos
+      const res = await fetch(`${API_BASE_URL}/flowers/crear`, {
         method: 'POST',
         headers: { 
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json' 
+          'Authorization': `Bearer ${user.token}`
+          // NOTA: Con FormData NO se pone Content-Type manualmente, el navegador lo calcula solo
         },
-        body: JSON.stringify(nuevoProducto)
+        body: formData
       });
 
       if (res.ok) {
+        setImagenArchivo(null); // Reseteamos el casillero de fotos
         fetchData();
         setShowModal(false);
       } else {
@@ -151,18 +160,17 @@ export default function App() {
     }
   };
 
-const handleEliminarProducto = async (idTarget) => {
+  const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
     if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
-      // 🚀 ESCUDO ANTICRASH: Borramos de la pantalla protegiendo si p o p.id no existen
       setProductos(prev => {
         if (!Array.isArray(prev)) return [];
         return prev.filter(p => {
-          if (!p) return false; // Si el producto está corrupto, lo ignora
+          if (!p) return false;
           const currentId = String(p.id || p._id || '');
           const targetId = String(idTarget);
           return currentId !== targetId;
@@ -170,7 +178,6 @@ const handleEliminarProducto = async (idTarget) => {
       });
 
       try {
-        // Enviamos la petición al servidor MySQL en segundo plano
         await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
           method: 'DELETE',
           headers: { 
@@ -180,12 +187,13 @@ const handleEliminarProducto = async (idTarget) => {
         });
 
         setFiltroCategoria('Todas');
-        fetchData(); // Refresca estadísticas del inicio
+        fetchData();
       } catch (error) {
         console.error("Error de red al intentar eliminar en servidor:", error);
       }
     }
   };
+
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
@@ -316,7 +324,6 @@ const handleEliminarProducto = async (idTarget) => {
                     <AreaChart data={[{d:'L',v:0}, {d:'M',v:0}, {d:'X',v:0}, {d:'J',v:0}, {d:'V',v:0}, {d:'S',v:0}, {d:'Hoy',v:stats.ventasTotal}]}>
                       <defs><linearGradient id="colorV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      {/* 🌟 CORREGIDO AQUÍ: Se eliminó el palito vertical intruso del fontWeight */}
                       <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize:10, fontWeight:'bold', fill:'#94a3b8'}} />
                       <Tooltip />
                       <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorV)" />
@@ -349,17 +356,17 @@ const handleEliminarProducto = async (idTarget) => {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
-<div className="flex flex-wrap gap-2 mt-3">
-  {categoriasExistentes.map((cat) => (
-    <button 
-      key={cat} 
-      onClick={() => setFiltroCategoria(cat)}
-      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-    >
-      [ {cat} ]
-    </button>
-  ))}
-</div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {categoriasExistentes.map((cat) => (
+                    <button 
+                      key={cat} 
+                      onClick={() => setFiltroCategoria(cat)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      [ {cat} ]
+                    </button>
+                  ))}
+                </div>
               
               </div>
               
@@ -389,9 +396,12 @@ const handleEliminarProducto = async (idTarget) => {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.categoria || prod.category || 'General';
                   
-                  const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
-                    ? prod.imagen 
-                    : obtenerImagenPorDefecto(prod.nombre, displayCat);
+                  // Si el backend te devuelve una ruta relativa de archivo (/uploads/imagen.jpg), le anteponemos la URL base del API
+                  const imagenSrc = (prod.imagen && prod.imagen.startsWith('/uploads/'))
+                    ? `https://floristeria-api-v2.onrender.com${prod.imagen}`
+                    : (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
+                      ? prod.imagen 
+                      : obtenerImagenPorDefecto(prod.nombre, displayCat);
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
@@ -485,9 +495,15 @@ const handleEliminarProducto = async (idTarget) => {
                 </div>
               </div>
 
+              {/* 🌟 AQUÍ SE HIZO EL CAMBIO: Cuadro de texto removido y reemplazado por selector de archivos reales */}
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Enlace / URL de la Foto (Color)</label>
-                <input type="text" placeholder="Puedes dejarlo en blanco si usas palabras clave" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <label className="block mb-1 uppercase tracking-wider">Subir Foto desde tu Computador (Descargas)</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setImagenArchivo(e.target.files[0])} 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-gray-50 text-gray-700 font-semibold focus:ring-2 ring-emerald-200 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#1b4332] file:text-white hover:file:bg-[#112a1f] file:cursor-pointer" 
+                />
               </div>
 
               <div>
@@ -496,7 +512,7 @@ const handleEliminarProducto = async (idTarget) => {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
+                <button type="button" onClick={() => { setShowModal(false); setImagenArchivo(null); }} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
                 <button type="submit" className="p-3 px-6 rounded-full bg-[#1b4332] hover:bg-[#112a1f] text-white uppercase font-black tracking-wider text-[10px]">Guardar en Inventario</button>
               </div>
             </form>

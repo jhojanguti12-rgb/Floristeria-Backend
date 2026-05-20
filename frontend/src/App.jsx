@@ -138,7 +138,7 @@ export default function App() {
 
     try {
       // 🚀 Apuntamos a la ruta experta de creación del FlowerRouter que revisamos
-      const res = await fetch(`${API_BASE_URL}/flowers/crear`, {
+      const res = await fetch(`${API_BASE_URL}/flores/crear`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${user.token}`

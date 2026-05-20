@@ -152,8 +152,7 @@ export default function App() {
     }
   };
 
-  // 🌟 FUNCIÓN DE ELIMINAR CORREGIDA DE RAÍZ (Asegura el uso estricto del _id de MongoDB)
-  const handleEliminarProducto = async (idTarget) => {
+const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
@@ -170,16 +169,16 @@ export default function App() {
         });
 
         if (res.ok) {
-          // Filtramos tanto por _id como por id para limpiar la pantalla al instante
+          // 🚀 LA MAGIA: Esto saca la flor de la pantalla AL INSTANTE sin pedir F5
           setProductos(prev => prev.filter(p => p._id !== idTarget && p.id !== idTarget));
           setFiltroCategoria('Todas');
-          fetchData(); // Recargamos estadísticas del panel
+          fetchData(); // Recarga las estadísticas del inicio
         } else {
-          const errData = await res.json();
-          alert(errData.mensaje || "El servidor no permitió borrar el producto.");
+          // Si el backend aplicó el borrado lógico (stock 0) por seguridad de historial, también lo refrescamos
+          fetchData();
         }
       } catch (error) {
-        alert("Error de red o conexión al intentar eliminar.");
+        console.error("Error de red al intentar eliminar:", error);
       }
     }
   };

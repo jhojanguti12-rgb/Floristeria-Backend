@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// PUT para cambiar el stock (el que probaremos con "stock: 8")
+// PUT para cambiar el stock
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -24,6 +24,22 @@ router.put('/:id', async (req, res) => {
         res.json({ mensaje: `✅ Stock de flor actualizado correctamente a ${stock}` });
     } catch (error) {
         console.error("❌ Error al actualizar stock:", error.message);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// 🌟 NUEVO: DELETE para eliminar una flor permanentemente
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Llamamos al servicio para eliminar
+        await productoService.deleteFlor(id);
+        
+        console.log(`🗑️ Inventario: Flor con ID ${id} eliminada.`);
+        res.json({ mensaje: "✅ Flor eliminada correctamente del sistema" });
+    } catch (error) {
+        console.error("❌ Error al eliminar flor:", error.message);
         res.status(400).json({ error: error.message });
     }
 });

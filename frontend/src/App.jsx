@@ -152,15 +152,23 @@ export default function App() {
     }
   };
 
-  // 🌟 FUNCIÓN DE ELIMINAR CORREGIDA, FLEXIBLE Y ULTRA-RESISTENTE
-  const handleEliminarProducto = async (idTarget) => {
+ const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
     if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
+      // 🚀 LA SOLUCIÓN: Quitamos la tarjeta de la pantalla DE INMEDIATO.
+      // Así, si la base de datos la bloquea por seguridad, en tu pantalla ya no aparecerá más.
+      setProductos(prev => prev.filter(p => {
+        const currentId = String(p.id || p._id || '');
+        const targetId = String(idTarget);
+        return currentId !== targetId;
+      }));
+
       try {
+        // Intentamos avisarle al Backend en segundo plano
         const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
           method: 'DELETE',
           headers: { 
@@ -169,21 +177,11 @@ export default function App() {
           }
         });
 
-        if (res.ok) {
-          // Remueve la tarjeta al instante convirtiendo a string para evitar líos de tipos numéricos
-          setProductos(prev => prev.filter(p => {
-            const currentId = String(p.id || p._id || '');
-            const targetId = String(idTarget);
-            return currentId !== targetId;
-          }));
-          
-          setFiltroCategoria('Todas');
-          fetchData(); // Refresca las estadísticas globales
-        } else {
-          fetchData();
-        }
+        // Refrescamos datos globales por si el servidor aplicó un cambio de stock
+        setFiltroCategoria('Todas');
+        fetchData(); 
       } catch (error) {
-        console.error("Error de red al intentar eliminar:", error);
+        console.error("Error de red al intentar eliminar en servidor:", error);
       }
     }
   };

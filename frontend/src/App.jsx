@@ -40,17 +40,16 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
 
-  // EXTRACCIÓN DE CATEGORÍAS REALES
+// 🌟 EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
   const categoriasExistentes = [
     'Todas', 
     ...new Set(
-      productos.map(p => {
-        const catVal = p.categoria || p.category || '';
-        return catVal.trim();
-      }).filter(cat => cat.length > 0)
+      productos
+        .map(p => p.categoria || p.category || '')
+        .map(cat => cat.trim()) // Quita espacios vacíos accidentales
+        .filter(cat => cat.length > 0) // Ignora categorías en blanco
     )
   ];
-
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
@@ -350,17 +349,18 @@ const handleEliminarProducto = async (idTarget) => {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {categoriasExistentes.map((cat) => (
-                    <button 
-                      key={cat} 
-                      onClick={() => setFiltroCategoria(cat)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                    >
-                      [ {cat} ]
-                    </button>
-                  ))}
-                </div>
+<div className="flex flex-wrap gap-2 mt-3">
+  {categoriasExistentes.map((cat) => (
+    <button 
+      key={cat} 
+      onClick={() => setFiltroCategoria(cat)}
+      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+    >
+      [ {cat} ]
+    </button>
+  ))}
+</div>
+              
               </div>
               
               <div className="flex items-center gap-3">

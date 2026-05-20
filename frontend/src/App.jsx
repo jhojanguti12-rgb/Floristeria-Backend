@@ -40,7 +40,7 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
 
-  // 🌟 EXTRACCIÓN ULTRA-RESISTENTE: Mapea tolerando variaciones de mayúsculas/minúsculas y asegura el botón 'Todas'
+  // EXTRACCIÓN DE CATEGORÍAS REALES
   const categoriasExistentes = [
     'Todas', 
     ...new Set(
@@ -152,23 +152,34 @@ export default function App() {
     }
   };
 
-  const handleEliminarProducto = async (id) => {
-    if (window.confirm("¿Seguro que deseas eliminar este producto?")) {
+  // 🌟 FUNCIÓN DE ELIMINAR CORREGIDA DE RAÍZ (Asegura el uso estricto del _id de MongoDB)
+  const handleEliminarProducto = async (idTarget) => {
+    if (!idTarget) {
+      alert("Error: El producto no tiene un identificador válido.");
+      return;
+    }
+
+    if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
       try {
-        const res = await fetch(`${API_BASE_URL}/productos/${id}`, {
+        const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
           method: 'DELETE',
           headers: { 
             'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json'
           }
         });
+
         if (res.ok) {
-          setProductos(productos.filter(p => p._id !== id && p.id !== id));
+          // Filtramos tanto por _id como por id para limpiar la pantalla al instante
+          setProductos(prev => prev.filter(p => p._id !== idTarget && p.id !== idTarget));
           setFiltroCategoria('Todas');
-          fetchData();
+          fetchData(); // Recargamos estadísticas del panel
+        } else {
+          const errData = await res.json();
+          alert(errData.mensaje || "El servidor no permitió borrar el producto.");
         }
       } catch (error) {
-        alert("Error al eliminar.");
+        alert("Error de red o conexión al intentar eliminar.");
       }
     }
   };
@@ -303,7 +314,7 @@ export default function App() {
                     <AreaChart data={[{d:'L',v:0}, {d:'M',v:0}, {d:'X',v:0}, {d:'J',v:0}, {d:'V',v:0}, {d:'S',v:0}, {d:'Hoy',v:stats.ventasTotal}]}>
                       <defs><linearGradient id="colorV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize:10, fontWeight:'bold', fill:'#94a3b8'}} />
+                      <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize:10, font|Weight:'bold', fill:'#94a3b8'}} />
                       <Tooltip />
                       <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorV)" />
                     </AreaChart>
@@ -335,7 +346,6 @@ export default function App() {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
-                {/* BOTONES DE CATEGORÍAS MEJORADOS */}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {categoriasExistentes.map((cat) => (
                     <button 
@@ -372,6 +382,7 @@ export default function App() {
                   if (prod.stock === 0) { badgeColor = 'bg-gray-400'; badgeText = 'Agotado'; }
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
+                  // 🌟 EXTRAEMOS EL IDENTIFICADOR DE FORMA ROBUSTA PRIORIZANDO EL _ID DE MONGO
                   const prodId = prod._id || prod.id;
                   const displayCat = prod.categoria || prod.category || 'General';
                   
@@ -405,6 +416,7 @@ export default function App() {
                         <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-50">
                           <span className="text-xl font-black text-[#1b4332]">{formatCOP(prod.precio)}</span>
                           <div className="flex gap-2">
+                            {/* 🌟 ENVIAMOS EL PRODID ENCONTRADO A LA NUEVA FUNCIÓN */}
                             <button onClick={() => handleEliminarProducto(prodId)} className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all">🗑️ Eliminar</button>
                           </div>
                         </div>
@@ -413,7 +425,7 @@ export default function App() {
                   );
                 }) : (
                   <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-400 font-bold text-sm">No hay productos en esta categoría.</p>
+                    <p className="text-gray-400 font-bold text-sm">No hay productos en esta categoría o tu inventario está vacío.</p>
                   </div>
                 )}
               </div>

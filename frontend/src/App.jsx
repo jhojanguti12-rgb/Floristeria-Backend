@@ -40,8 +40,16 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
 
-  // 🌟 EXTRAER CATEGORÍAS REALES: Mapea tus productos y saca una lista única de lo que tú guardaste
-  const categoriasExistentes = ['Todas', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
+  // 🌟 EXTRACCIÓN ULTRA-RESISTENTE: Mapea tolerando variaciones de mayúsculas/minúsculas y asegura el botón 'Todas'
+  const categoriasExistentes = [
+    'Todas', 
+    ...new Set(
+      productos.map(p => {
+        const catVal = p.categoria || p.category || '';
+        return catVal.trim();
+      }).filter(cat => cat.length > 0)
+    )
+  ];
 
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
@@ -106,7 +114,7 @@ export default function App() {
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     const nombreInput = e.target[0].value;
-    const categoriaInput = e.target[1].value; // Ahora lee el campo de texto libre
+    const categoriaInput = e.target[1].value; 
     let imagenInput = e.target[4].value;
 
     if (!imagenInput.startsWith('http://') && !imagenInput.startsWith('https://')) {
@@ -156,7 +164,6 @@ export default function App() {
         });
         if (res.ok) {
           setProductos(productos.filter(p => p._id !== id && p.id !== id));
-          // Si eliminas el último producto de una categoría, volvemos a 'Todas'
           setFiltroCategoria('Todas');
           fetchData();
         }
@@ -186,7 +193,8 @@ export default function App() {
   };
 
   const productosFiltrados = productos.filter(p => {
-    const cumpleCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
+    const pCat = p.categoria || p.category || '';
+    const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim() === filtroCategoria;
     const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
     return cumpleCategoria && cumpleBusqueda;
   });
@@ -327,7 +335,7 @@ export default function App() {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
-                {/* 🌟 BOTONES DE CATEGORÍAS TOTALMENTE DINÁMICOS */}
+                {/* BOTONES DE CATEGORÍAS MEJORADOS */}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {categoriasExistentes.map((cat) => (
                     <button 
@@ -365,10 +373,11 @@ export default function App() {
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
                   const prodId = prod._id || prod.id;
+                  const displayCat = prod.categoria || prod.category || 'General';
                   
                   const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
                     ? prod.imagen 
-                    : obtenerImagenPorDefecto(prod.nombre, prod.categoria);
+                    : obtenerImagenPorDefecto(prod.nombre, displayCat);
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
@@ -378,7 +387,7 @@ export default function App() {
                           alt={prod.nombre} 
                           className="w-full h-full object-cover"
                           onError={(e) => { 
-                            e.target.src = obtenerImagenPorDefecto(prod.nombre, prod.categoria); 
+                            e.target.src = obtenerImagenPorDefecto(prod.nombre, displayCat); 
                           }} 
                         />
                         <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
@@ -389,7 +398,7 @@ export default function App() {
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div>
                           <h4 className="font-black text-gray-800 text-lg leading-tight mb-1">{prod.nombre}</h4>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{prod.categoria}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{displayCat}</p>
                           <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">[{prod.stock} und]</span></p>
                         </div>
                         
@@ -434,7 +443,7 @@ export default function App() {
 
       </main>
 
-      {/* --- MODAL FORMULARIO TOTALMENTE LIBRE --- */}
+      {/* MODAL FORMULARIO */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
@@ -446,7 +455,6 @@ export default function App() {
                 <input type="text" required placeholder="Ej. Rosa Azul o Girasol Gigante" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
-              {/* 🌟 CORREGIDO: Campo de texto libre para que escribas la categoría que tú quieras */}
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
                 <input type="text" required placeholder="Ej. Exóticas, Ramos Premium, Follaje..." className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />

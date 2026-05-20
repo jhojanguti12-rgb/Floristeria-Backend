@@ -152,16 +152,27 @@ export default function App() {
     }
   };
 
-  // 🌟 FUNCIÓN DE ELIMINAR CORREGIDA, FLEXIBLE Y ULTRA-RESISTENTE
-  const handleEliminarProducto = async (idTarget) => {
+const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
     if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
+      // 🚀 ESCUDO ANTICRASH: Borramos de la pantalla protegiendo si p o p.id no existen
+      setProductos(prev => {
+        if (!Array.isArray(prev)) return [];
+        return prev.filter(p => {
+          if (!p) return false; // Si el producto está corrupto, lo ignora
+          const currentId = String(p.id || p._id || '');
+          const targetId = String(idTarget);
+          return currentId !== targetId;
+        });
+      });
+
       try {
-        const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
+        // Enviamos la petición al servidor MySQL en segundo plano
+        await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
           method: 'DELETE',
           headers: { 
             'Authorization': `Bearer ${user.token}`,
@@ -169,25 +180,13 @@ export default function App() {
           }
         });
 
-        if (res.ok) {
-          // Remueve la tarjeta al instante convirtiendo a string para evitar líos de tipos numéricos
-          setProductos(prev => prev.filter(p => {
-            const currentId = String(p.id || p._id || '');
-            const targetId = String(idTarget);
-            return currentId !== targetId;
-          }));
-          
-          setFiltroCategoria('Todas');
-          fetchData(); // Refresca las estadísticas globales
-        } else {
-          fetchData();
-        }
+        setFiltroCategoria('Todas');
+        fetchData(); // Refresca estadísticas del inicio
       } catch (error) {
-        console.error("Error de red al intentar eliminar:", error);
+        console.error("Error de red al intentar eliminar en servidor:", error);
       }
     }
   };
-
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();

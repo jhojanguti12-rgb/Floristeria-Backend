@@ -152,7 +152,8 @@ export default function App() {
     }
   };
 
-const handleEliminarProducto = async (idTarget) => {
+  // 🌟 FUNCIÓN DE ELIMINAR CORREGIDA, FLEXIBLE Y ULTRA-RESISTENTE
+  const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
@@ -169,14 +170,16 @@ const handleEliminarProducto = async (idTarget) => {
         });
 
         if (res.ok) {
-          // 🚀 CORRECCIÓN COMPATIBLE CON MYSQL: 
-          // Forzamos la comparación usando solo el 'id' numérico real de tu base de datos
-          setProductos(prev => prev.filter(p => Number(p.id) !== Number(idTarget)));
+          // Remueve la tarjeta al instante convirtiendo a string para evitar líos de tipos numéricos
+          setProductos(prev => prev.filter(p => {
+            const currentId = String(p.id || p._id || '');
+            const targetId = String(idTarget);
+            return currentId !== targetId;
+          }));
+          
           setFiltroCategoria('Todas');
-          fetchData(); // Refresca las estadísticas en el inicio automáticamente
+          fetchData(); // Refresca las estadísticas globales
         } else {
-          // Si el backend no pudo borrar por completo (por ejemplo, por registros amarrados)
-          // pero modificó el stock a 0, refrescamos el catálogo desde el servidor
           fetchData();
         }
       } catch (error) {
@@ -315,7 +318,8 @@ const handleEliminarProducto = async (idTarget) => {
                     <AreaChart data={[{d:'L',v:0}, {d:'M',v:0}, {d:'X',v:0}, {d:'J',v:0}, {d:'V',v:0}, {d:'S',v:0}, {d:'Hoy',v:stats.ventasTotal}]}>
                       <defs><linearGradient id="colorV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize:10, font|Weight:'bold', fill:'#94a3b8'}} />
+                      {/* 🌟 CORREGIDO AQUÍ: Se eliminó el palito vertical intruso del fontWeight */}
+                      <XAxis dataKey="d" axisLine={false} tickLine={false} tick={{fontSize:10, fontWeight:'bold', fill:'#94a3b8'}} />
                       <Tooltip />
                       <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorV)" />
                     </AreaChart>
@@ -383,8 +387,7 @@ const handleEliminarProducto = async (idTarget) => {
                   if (prod.stock === 0) { badgeColor = 'bg-gray-400'; badgeText = 'Agotado'; }
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
-                  // 🌟 EXTRAEMOS EL IDENTIFICADOR DE FORMA ROBUSTA PRIORIZANDO EL _ID DE MONGO
-                  const prodId = prod._id || prod.id;
+                  const prodId = prod.id || prod._id;
                   const displayCat = prod.categoria || prod.category || 'General';
                   
                   const imagenSrc = (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
@@ -417,7 +420,6 @@ const handleEliminarProducto = async (idTarget) => {
                         <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-50">
                           <span className="text-xl font-black text-[#1b4332]">{formatCOP(prod.precio)}</span>
                           <div className="flex gap-2">
-                            {/* 🌟 ENVIAMOS EL PRODID ENCONTRADO A LA NUEVA FUNCIÓN */}
                             <button onClick={() => handleEliminarProducto(prodId)} className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all">🗑️ Eliminar</button>
                           </div>
                         </div>

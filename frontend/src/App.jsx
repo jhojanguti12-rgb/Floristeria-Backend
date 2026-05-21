@@ -111,7 +111,7 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      setLoading(false);
+      loading(false);
     }
   };
 
@@ -472,7 +472,23 @@ export default function App() {
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
-                <input type="text" required placeholder="Ej. Exóticas, Ramos Premium, Follaje..." className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input 
+                  type="text" 
+                  required 
+                  list="categorias-sugeridas" 
+                  placeholder="Escribe para buscar o crea una nueva..." 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
+                />
+                
+                {/* LISTADO DE AUTOCOMPLETADO INTELIGENTE DESDE MYSQL */}
+                <datalist id="categorias-sugeridas">
+                  {categoriasExistentes
+                    .filter(cat => cat !== 'Todas' && cat.trim() !== '')
+                    .map((cat, index) => (
+                      <option key={index} value={cat} />
+                    ))
+                  }
+                </datalist>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

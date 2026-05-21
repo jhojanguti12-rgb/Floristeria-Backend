@@ -91,8 +91,8 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const email = e.target[0].value;
-    const password = e.target[1].value;
+    const email = e.target.elements.email.value;
+    const password = e.target.elements.password.value;
 
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
@@ -111,17 +111,19 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      loading(false);
+      setLoading(false);
     }
   };
 
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
-    const nombreInput = e.target[0].value;
-    const categoriaInput = e.target[1].value;
-    const stockInput = e.target[2].value;
-    const precioInput = e.target[3].value;
-    const fechaIngresoInput = e.target[5].value;
+    
+    // Extracción segura por el atributo 'name' de cada input
+    const nombreInput = e.target.elements.nombre.value;
+    const categoriaInput = e.target.elements.categoria.value;
+    const stockInput = e.target.elements.stock.value;
+    const precioInput = e.target.elements.precio.value;
+    const fechaIngresoInput = e.target.elements.fechaIngreso.value;
 
     const formData = new FormData();
     formData.append('nombre', nombreInput);
@@ -193,7 +195,7 @@ export default function App() {
       const ingreso = new Date(fechaRef);
       const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
       if (diferenciaDias >= 4) {
-        alertas.push({
+        alerts.push({
           id: p.id || p._id,
           mensaje: `${p.nombre} - Verificar lote`,
           detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
@@ -219,8 +221,8 @@ export default function App() {
           <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
           <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">¡El jardín de tus sueños está a un paso!</p>
           <div className="space-y-4">
-            <input type="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
-            <input type="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
+            <input type="email" name="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
+            <input type="password" name="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
             <button disabled={loading} className="w-full bg-[#d81b60] text-white p-5 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#ad1457] mt-4 disabled:bg-gray-400">
               {loading ? 'Entrando...' : 'Entrar al Jardín'}
             </button>
@@ -385,14 +387,14 @@ export default function App() {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-                  // 🔥 CORRECCIÓN CLAVE: Leemos 'imagen_url' que viene directo de tu MySQL
-                  const urlFotoReal = prod.imagen_url || prod.imagen || '';
+                  // 🔥 SECCIÓN CORREGIDA: Filtro estricto para priorizar siempre la foto subida a Render
+                  const urlFotoReal = prod.imagen_url || prod.imagen;
 
-                  const imagenSrc = (urlFotoReal && urlFotoReal.startsWith('/uploads/'))
-                    ? `https://floristeria-api-v2.onrender.com${urlFotoReal}`
-                    : (urlFotoReal && (urlFotoReal.startsWith('http://') || urlFotoReal.startsWith('https://')))
-                      ? urlFotoReal 
-                      : obtenerImagenPorDefecto(prod.nombre, displayCat);
+                  const imagenSrc = urlFotoReal 
+                    ? (urlFotoReal.startsWith('/uploads/') 
+                        ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
+                        : urlFotoReal)
+                    : obtenerImagenPorDefecto(prod.nombre, displayCat);
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
@@ -467,13 +469,14 @@ export default function App() {
             <form onSubmit={handleAgregarProducto} className="space-y-4 text-xs font-bold text-gray-500">
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Nombre del Producto *</label>
-                <input type="text" required placeholder="Ej. Rosa Azul o Girasol Gigante" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="text" name="nombre" required placeholder="Ej. Rosa Azul o Girasol Gigante" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
                 <input 
                   type="text" 
+                  name="categoria"
                   required 
                   list="categorias-sugeridas" 
                   placeholder="Escribe para buscar o crea una nueva..." 
@@ -494,11 +497,11 @@ export default function App() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block mb-1 uppercase tracking-wider">Cantidad Inicial *</label>
-                  <input type="number" required min="0" placeholder="45" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                  <input type="number" name="stock" required min="0" placeholder="45" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
                 <div>
                   <label className="block mb-1 uppercase tracking-wider">Precio Unitario ($) *</label>
-                  <input type="number" required min="0" placeholder="5000" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                  <input type="number" name="precio" required min="0" placeholder="5000" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
               </div>
 
@@ -514,7 +517,7 @@ export default function App() {
 
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Fecha de Ingreso *</label>
-                <input type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                <input type="date" name="fechaIngreso" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

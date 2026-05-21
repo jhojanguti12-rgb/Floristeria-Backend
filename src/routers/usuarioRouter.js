@@ -90,3 +90,37 @@ router.get('/perfil', (req, res) => {
 });
 
 module.exports = router;
+// ... Todo tu código anterior de registro, crear-personal y login ...
+
+// 🌟 NUEVO: 4. Ruta para obtener TODO el personal (Protegida para el Admin)
+router.get('/personal', verificarToken, async (req, res) => {
+    if (req.usuario.rol !== 'admin') {
+        return res.status(403).json({ mensaje: "Acceso denegado." });
+    }
+    try {
+        // Llamamos al servicio para traer solo los usuarios que NO sean clientes habituales
+        const personal = await usuarioService.getAllPersonal();
+        return res.json(personal);
+    } catch (error) {
+        console.error("❌ Error al obtener personal:", error.message);
+        return res.status(500).json({ mensaje: "Error al cargar la lista de personal" });
+    }
+});
+
+// 🌟 NUEVO: 5. Ruta para ELIMINAR a un miembro del personal (Protegida)
+router.delete('/personal/:id', verificarToken, async (req, res) => {
+    if (req.usuario.rol !== 'admin') {
+        return res.status(403).json({ mensaje: "Acceso denegado." });
+    }
+    try {
+        const { id } = req.params;
+        await usuarioService.deletePersonal(id);
+        return res.json({ mensaje: "✅ Empleado eliminado correctamente del sistema" });
+    } catch (error) {
+        console.error("❌ Error al eliminar personal:", error.message);
+        return res.status(500).json({ mensaje: "No se pudo eliminar el empleado" });
+    }
+});
+
+// ⚠️ ¡ESTA LÍNEA DEBE SEGUIR SIENDO EL CIERRE ABSOLUTO!
+module.exports = router;

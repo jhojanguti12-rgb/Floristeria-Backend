@@ -95,7 +95,38 @@ const usuarioService = {
         } catch (error) {
             throw error;
         }
+    }, 
+
+    /**
+     * 🌟 4. Obtener todo el personal (Admin Panel)
+     * Filtra la base de datos para traer únicamente administradores y empleados,
+     * excluyendo las contraseñas por seguridad.
+     */
+    getAllPersonal: async () => {
+        try {
+            // Buscamos usuarios cuyo rol NO sea 'cliente'
+            const query = 'SELECT id, nombre, email, rol FROM usuarios WHERE rol != "cliente"';
+            const [results] = await db.query(query);
+            return results;
+        } catch (error) {
+            console.error("❌ Error en getAllPersonal:", error.message);
+            throw error;
+        }
+    },
+
+    /**
+     * 🌟 5. Eliminar un usuario del personal por ID
+     */
+    deletePersonal: async (id) => {
+        try {
+            const query = 'DELETE FROM usuarios WHERE id = ?';
+            const [result] = await db.query(query, [id]);
+            return result;
+        } catch (error) {
+            console.error("❌ Error en deletePersonal:", error.message);
+            throw error;
+        }
     }
-};
+}; 
 
 module.exports = usuarioService;

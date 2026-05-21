@@ -58,3 +58,20 @@ router.post('/crear', verificarToken, uploadWithErrorHandler, async (req, res, n
 });
 // ... resto de rutas (editar, estado, eliminar) se mantienen igual ...
 module.exports = router;
+// =========================================================================
+// 🗑️ NUEVO: DELETE para eliminar una flor permanentemente de la base de datos
+// =========================================================================
+router.delete('/:id', verificarToken, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Llamamos al servicio de flores para eliminarla de MySQL
+        await flowerService.deleteFlower(id); 
+        
+        console.log(`🗑️ Inventario: Flor con ID ${id} eliminada correctamente.`);
+        res.json({ mensaje: "✅ Flor eliminada correctamente del sistema" });
+    } catch (error) {
+        console.error("❌ Error al eliminar la flor:", error.message);
+        next(error);
+    }
+});

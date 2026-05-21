@@ -162,13 +162,14 @@ const handleEliminarProducto = async (idTarget) => {
 
   if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
     try {
-      const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+
+const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambiado 'flores' por 'productos'
+  method: 'DELETE',
+  headers: { 
+    'Authorization': `Bearer ${user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
 
       if (res.ok) {
         // ✅ SI EL SERVIDOR CONFIRMA (200 OK): Borramos de pantalla y refrescamos todo

@@ -133,7 +133,7 @@ export default function App() {
 
     // Si seleccionaste un archivo real en el botón, lo adjuntamos
     if (imagenArchivo) {
-      formData.append('foto', imagenArchivo);
+      formData.append('imagen', imagenArchivo);
     }
 
     try {

@@ -39,11 +39,9 @@ export default function App() {
   });
 
   const [productos, setProductos] = useState([]);
-  
-  // Guardar temporalmente la foto elegida
   const [imagenArchivo, setImagenArchivo] = useState(null);
 
-  // EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
+  // EXTRACCIÓN DINÁMICA DE CATEGORÍAS
   const categoriasExistentes = [
     'Todas', 
     ...new Set(
@@ -71,7 +69,6 @@ export default function App() {
         });
       }
 
-      // IMPORTANTE: Llamamos a /flores para el inventario completo con categorías unificadas
       const resProd = await fetch(`${API_BASE_URL}/flores`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
@@ -118,7 +115,6 @@ export default function App() {
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     
-    // Extracción segura por el atributo 'name' de cada input
     const nombreInput = e.target.elements.nombre.value;
     const categoriaInput = e.target.elements.categoria.value;
     const stockInput = e.target.elements.stock.value;
@@ -195,7 +191,7 @@ export default function App() {
       const ingreso = new Date(fechaRef);
       const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
       if (diferenciaDias >= 4) {
-        alerts.push({
+        alertas.push({
           id: p.id || p._id,
           mensaje: `${p.nombre} - Verificar lote`,
           detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
@@ -387,7 +383,6 @@ export default function App() {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-                  // 🔥 SECCIÓN CORREGIDA: Filtro estricto para priorizar siempre la foto subida a Render
                   const urlFotoReal = prod.imagen_url || prod.imagen;
 
                   const imagenSrc = urlFotoReal 
@@ -483,7 +478,6 @@ export default function App() {
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
                 
-                {/* LISTADO DE AUTOCOMPLETADO INTELIGENTE DESDE MYSQL */}
                 <datalist id="categorias-sugeridas">
                   {categoriasExistentes
                     .filter(cat => cat !== 'Todas' && cat.trim() !== '')

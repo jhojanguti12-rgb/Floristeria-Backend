@@ -34,6 +34,10 @@ export default function App() {
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 🌟 ESTADOS NUEVOS PARA PERSONAL
+  const [empleados, setEmpleados] = useState([]);
+  const [showModalEmpleado, setShowModalEmpleado] = useState(false);
+
   const [stats, setStats] = useState({ 
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
   });
@@ -51,6 +55,26 @@ export default function App() {
         .filter(cat => cat.length > 0) 
     )
   ];
+
+  // 🌟 FUNCIÓN NUEVA: TRAER LA LISTA DE EMPLEADOS DESDE TU API
+  const fetchEmpleados = useCallback(async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/personal`, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const datos = await res.json();
+        setEmpleados(Array.isArray(datos) ? datos : []);
+      }
+    } catch (error) {
+      console.error("Error cargando lista de personal:", error);
+    }
+  }, [user]);
 
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
@@ -81,9 +105,13 @@ export default function App() {
     }
   }, [user]);
 
+  // CARGAR TODO AL CAMBIAR O INICIAR SESIÓN
   useEffect(() => {
-    if (user) fetchData();
-  }, [user, fetchData]);
+    if (user) {
+      fetchData();
+      fetchEmpleados();
+    }
+  }, [user, fetchData, fetchEmpleados]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -108,7 +136,7 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      setLoading(false);
+      loading(false);
     }
   };
 
@@ -154,46 +182,96 @@ export default function App() {
     }
   };
 
-const handleEliminarProducto = async (idTarget) => {
-  if (!idTarget) {
-    alert("Error: El producto no tiene un identificador válido.");
-    return;
-  }
+  const handleEliminarProducto = async (idTarget) => {
+    if (!idTarget) {
+      alert("Error: El producto no tiene un identificador válido.");
+      return;
+    }
 
-  if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
+    if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, { 
+          method: 'DELETE',
+          headers: { 
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          setProductos(prevProductos => 
+            prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
+          );
+          setFiltroCategoria('Todas');
+          fetchData(); 
+        } else {
+          alert("No se pudo eliminar de la base de datos.");
+        }
+      } catch (error) {
+        console.error("Error de red al intentar eliminar:", error);
+      }
+    }
+  };
+
+  // 🌟 FUNCIÓN NUEVA: ENVIAR FORMULARIO DE NUEVO EMPLEADO AL BACKEND
+  const handleCrearEmpleado = async (e) => {
+    e.preventDefault();
+    const nombre = e.target.elements.emp_nombre.value;
+    const email = e.target.elements.emp_email.value;
+    const password = e.target.elements.emp_password.value;
+    const rol = e.target.elements.emp_rol.value;
+
     try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/crear-personal`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ nombre, email, password, rol })
+      });
 
-const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambiado 'flores' por 'productos'
-  method: 'DELETE',
-  headers: { 
-    'Authorization': `Bearer ${user.token}`,
-    'Content-Type': 'application/json'
-  }
-});
+      const respuesta = await res.json();
 
       if (res.ok) {
-        // ✅ SI EL SERVIDOR CONFIRMA (200 OK): Borramos de pantalla y refrescamos todo
-        setProductos(prevProductos => 
-          prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
-        );
-        setFiltroCategoria('Todas');
-        fetchData(); 
-      } else if (res.status === 404) {
-        // ⚠️ SI DA ERROR 404 (Ruta mal configurada o no encontrado): 
-        // La borramos a la fuerza de la pantalla para que no te estorbe, 
-        // pero NO llamamos a fetchData() para que el servidor no la vuelva a traer.
-        console.warn(`El servidor devolvió 404 en la ruta de eliminación para el ID ${idTarget}.`);
-        setProductos(prevProductos => 
-          prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
-        );
+        alert(respuesta.mensaje || "✅ Empleado registrado correctamente.");
+        setShowModalEmpleado(false);
+        e.target.reset();
+        fetchEmpleados(); // Refresca la tabla automáticamente
+        fetchData(); // Refresca los contadores de las tarjetas de arriba
       } else {
-        alert("No se pudo eliminar de la base de datos. Verifica los permisos.");
+        alert(respuesta.mensaje || "Error al registrar empleado.");
       }
     } catch (error) {
-      console.error("Error de red al intentar eliminar en servidor:", error);
+      alert("Error de red al intentar registrar al empleado.");
     }
-  }
-};
+  };
+
+  // 🌟 FUNCIÓN NUEVA: ELIMINAR UN TRABAJADOR DE LA BASE DE DATOS
+  const handleEliminarEmpleado = async (idEmpleado) => {
+    if (window.confirm("¿Estás seguro de que deseas dar de baja a este empleado?")) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/usuarios/personal/${idEmpleado}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          alert("✅ Empleado eliminado del sistema.");
+          fetchEmpleados();
+          fetchData();
+        } else {
+          alert("No se pudo eliminar al empleado.");
+        }
+      } catch (error) {
+        console.error("Error al eliminar personal:", error);
+      }
+    }
+  };
+
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
@@ -273,6 +351,11 @@ const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambia
           </div>
           <div onClick={() => { setActiveTab('inventario'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inventario' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📦</span> <span>Inventario</span>
+          </div>
+          
+          {/* 🌟 ENLACE DE NAVEGACIÓN NUEVO EN EL MENÚ LATERAL */}
+          <div onClick={() => { setActiveTab('personal'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'personal' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+            <span className="text-lg">🧑‍💼</span> <span>Personal</span>
           </div>
         </nav>
         
@@ -465,9 +548,71 @@ const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambia
           </div>
         )}
 
+        {/* 🌟 VISTA NUEVA: INTERFAZ COMPLETA DE PERSONAL */}
+        {activeTab === 'personal' && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Equipo de Trabajo</h2>
+                <p className="text-gray-400 font-bold text-xs mt-1">Lista de empleados y administradores de la floristería.</p>
+              </div>
+              <button onClick={() => setShowModalEmpleado(true)} className="bg-[#42a5f5] hover:bg-[#1e88e5] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg self-start sm:self-auto">
+                + Registrar Empleado
+              </button>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xs overflow-hidden p-6 md:p-8">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-semibold text-gray-500">
+                  <thead>
+                    <tr className="uppercase border-b border-gray-100 text-[10px] tracking-widest text-gray-400">
+                      <th className="p-4 pl-2">Nombre</th>
+                      <th className="p-4">Correo Electrónico</th>
+                      <th className="p-4">Cargo / Rol</th>
+                      <th className="p-4 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-sm text-gray-700">
+                    {empleados.length > 0 ? empleados.map((emp) => (
+                      <tr key={emp.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-4 pl-2 font-black text-gray-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black uppercase text-xs">
+                            {emp.nombre?.charAt(0)}
+                          </div>
+                          {emp.nombre}
+                        </td>
+                        <td className="p-4 font-medium text-gray-500">{emp.email}</td>
+                        <td className="p-4">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${emp.rol === 'admin' ? 'bg-pink-100 text-pink-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {emp.rol}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button 
+                            onClick={() => handleEliminarEmpleado(emp.id)} 
+                            className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all uppercase"
+                          >
+                            🗑️ Dar de Baja
+                          </button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="4" className="text-center py-12 text-gray-400 font-bold">
+                          No hay personal administrativo registrado actualmente.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
-      {/* MODAL FORMULARIO */}
+      {/* MODAL FORMULARIO: AGREGAR FLOR */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
@@ -489,7 +634,6 @@ const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambia
                   placeholder="Escribe para buscar o crea una nueva..." 
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
-                
                 <datalist id="categorias-sugeridas">
                   {categoriasExistentes
                     .filter(cat => cat !== 'Todas' && cat.trim() !== '')
@@ -529,6 +673,45 @@ const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, { // <-- Cambia
               <div className="flex justify-end gap-2 pt-4">
                 <button type="button" onClick={() => { setShowModal(false); setImagenArchivo(null); }} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
                 <button type="submit" className="p-3 px-6 rounded-full bg-[#1b4332] hover:bg-[#112a1f] text-white uppercase font-black tracking-wider text-[10px]">Guardar en Inventario</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 MODAL FORMULARIO NUEVO: REGISTRAR UN EMPLEADO */}
+      {showModalEmpleado && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
+            <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Registrar Empleado</h3>
+            
+            <form onSubmit={handleCrearEmpleado} className="space-y-4 text-xs font-bold text-gray-500">
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Nombre Completo *</label>
+                <input type="text" name="emp_nombre" required placeholder="Ej. Carlos Mendoza" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+              </div>
+
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Correo Electrónico *</label>
+                <input type="email" name="emp_email" required placeholder="carlos@floristeria.com" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+              </div>
+
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Contraseña de Acceso *</label>
+                <input type="password" name="emp_password" required placeholder="••••••••" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+              </div>
+
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Asignar Rol/Cargo *</label>
+                <select name="emp_rol" required className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold bg-white focus:ring-2 ring-blue-200">
+                  <option value="empleado">🌸 Empleado / Florista</option>
+                  <option value="admin">💼 Administrador</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={() => setShowModalEmpleado(false)} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
+                <button type="submit" className="p-3 px-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white uppercase font-black tracking-wider text-[10px]">Dar de Alta</button>
               </div>
             </form>
           </div>

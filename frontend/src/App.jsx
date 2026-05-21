@@ -40,17 +40,17 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
   
-  // 🌟 NUEVO ESTADO: Guarda temporalmente la foto que elijas desde Descargas
+  // Guardar temporalmente la foto elegida
   const [imagenArchivo, setImagenArchivo] = useState(null);
 
-  // 🌟 EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
+  // EXTRACCIÓN DINÁMICA DE CATEGORÍAS DESDE MYSQL
   const categoriasExistentes = [
     'Todas', 
     ...new Set(
       productos
-        .map(p => p.categoria || p.category || '')
-        .map(cat => cat.trim()) // Quita espacios vacíos accidentales
-        .filter(cat => cat.length > 0) // Ignora categorías en blanco
+        .map(p => p.nombre_categoria || p.categoria || p.category || '')
+        .map(cat => cat.trim()) 
+        .filter(cat => cat.length > 0) 
     )
   ];
 
@@ -71,7 +71,8 @@ export default function App() {
         });
       }
 
-      const resProd = await fetch(`${API_BASE_URL}/productos`, {
+      // IMPORTANTE: Llamamos a /flores para el inventario completo con categorías unificadas
+      const resProd = await fetch(`${API_BASE_URL}/flores`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
       if (resProd.ok) {
@@ -89,7 +90,7 @@ export default function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    loading(true);
+    setLoading(true);
     const email = e.target[0].value;
     const password = e.target[1].value;
 
@@ -114,7 +115,6 @@ export default function App() {
     }
   };
 
-  // 🌟 FUNCIÓN REESTRUCTURADA PARA ENVIAR LA FOTO REAL DE DESCARGAS COMO FORMDATA
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     const nombreInput = e.target[0].value;
@@ -123,7 +123,6 @@ export default function App() {
     const precioInput = e.target[3].value;
     const fechaIngresoInput = e.target[5].value;
 
-    // Preparamos el empaque FormData especial para archivos mixtos
     const formData = new FormData();
     formData.append('nombre', nombreInput);
     formData.append('categoria', categoriaInput);
@@ -131,24 +130,21 @@ export default function App() {
     formData.append('precio', Number(precioInput));
     formData.append('fechaIngreso', fechaIngresoInput);
 
-    // Si seleccionaste un archivo real en el botón, lo adjuntamos
     if (imagenArchivo) {
       formData.append('imagen', imagenArchivo);
     }
 
     try {
-      // 🚀 Apuntamos a la ruta experta de creación del FlowerRouter que revisamos
       const res = await fetch(`${API_BASE_URL}/flores/crear`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${user.token}`
-          // NOTA: Con FormData NO se pone Content-Type manualmente, el navegador lo calcula solo
         },
         body: formData
       });
 
       if (res.ok) {
-        setImagenArchivo(null); // Reseteamos el casillero de fotos
+        setImagenArchivo(null); 
         fetchData();
         setShowModal(false);
       } else {
@@ -167,18 +163,8 @@ export default function App() {
     }
 
     if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
-      setProductos(prev => {
-        if (!Array.isArray(prev)) return [];
-        return prev.filter(p => {
-          if (!p) return false;
-          const currentId = String(p.id || p._id || '');
-          const targetId = String(idTarget);
-          return currentId !== targetId;
-        });
-      });
-
       try {
-        await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
+        const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
           method: 'DELETE',
           headers: { 
             'Authorization': `Bearer ${user.token}`,
@@ -186,8 +172,12 @@ export default function App() {
           }
         });
 
-        setFiltroCategoria('Todas');
-        fetchData();
+        if (res.ok) {
+          setFiltroCategoria('Todas');
+          fetchData();
+        } else {
+          alert("No se pudo eliminar de la base de datos.");
+        }
       } catch (error) {
         console.error("Error de red al intentar eliminar en servidor:", error);
       }
@@ -198,13 +188,13 @@ export default function App() {
     const alertas = [];
     const hoy = new Date();
     productos.forEach(p => {
-      const fechaRef = p.fechaIngreso || p.createdAt;
+      const fechaRef = p.fecha_ingreso || p.fechaIngreso || p.createdAt;
       if (!fechaRef) return;
       const ingreso = new Date(fechaRef);
       const diferenciaDias = Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
       if (diferenciaDias >= 4) {
         alertas.push({
-          id: p._id || p.id,
+          id: p.id || p._id,
           mensaje: `${p.nombre} - Verificar lote`,
           detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
         });
@@ -214,7 +204,7 @@ export default function App() {
   };
 
   const productosFiltrados = productos.filter(p => {
-    const pCat = p.categoria || p.category || '';
+    const pCat = p.nombre_categoria || p.categoria || p.category || '';
     const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim() === filtroCategoria;
     const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
     return cumpleCategoria && cumpleBusqueda;
@@ -363,11 +353,10 @@ export default function App() {
                       onClick={() => setFiltroCategoria(cat)}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                     >
-                      [ {cat} ]
+                      {cat}
                     </button>
                   ))}
                 </div>
-              
               </div>
               
               <div className="flex items-center gap-3">
@@ -394,13 +383,15 @@ export default function App() {
                   else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
 
                   const prodId = prod.id || prod._id;
-                  const displayCat = prod.categoria || prod.category || 'General';
+                  const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-                  // Si el backend te devuelve una ruta relativa de archivo (/uploads/imagen.jpg), le anteponemos la URL base del API
-                  const imagenSrc = (prod.imagen && prod.imagen.startsWith('/uploads/'))
-                    ? `https://floristeria-api-v2.onrender.com${prod.imagen}`
-                    : (prod.imagen && (prod.imagen.startsWith('http://') || prod.imagen.startsWith('https://')))
-                      ? prod.imagen 
+                  // 🔥 CORRECCIÓN CLAVE: Leemos 'imagen_url' que viene directo de tu MySQL
+                  const urlFotoReal = prod.imagen_url || prod.imagen || '';
+
+                  const imagenSrc = (urlFotoReal && urlFotoReal.startsWith('/uploads/'))
+                    ? `https://floristeria-api-v2.onrender.com${urlFotoReal}`
+                    : (urlFotoReal && (urlFotoReal.startsWith('http://') || urlFotoReal.startsWith('https://')))
+                      ? urlFotoReal 
                       : obtenerImagenPorDefecto(prod.nombre, displayCat);
 
                   return (
@@ -415,7 +406,7 @@ export default function App() {
                           }} 
                         />
                         <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
-                          [ {badgeText} ]
+                          {badgeText}
                         </span>
                       </div>
                       
@@ -423,7 +414,7 @@ export default function App() {
                         <div>
                           <h4 className="font-black text-gray-800 text-lg leading-tight mb-1">{prod.nombre}</h4>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{displayCat}</p>
-                          <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">[{prod.stock} und]</span></p>
+                          <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">{prod.stock} und</span></p>
                         </div>
                         
                         <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-50">
@@ -495,9 +486,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 🌟 AQUÍ SE HIZO EL CAMBIO: Cuadro de texto removido y reemplazado por selector de archivos reales */}
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Subir Foto desde tu Computador (Descargas)</label>
+                <label className="block mb-1 uppercase tracking-wider">Subir Foto desde tu Computador</label>
                 <input 
                   type="file" 
                   accept="image/*" 

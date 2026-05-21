@@ -154,7 +154,7 @@ export default function App() {
     }
   };
 
-  const handleEliminarProducto = async (idTarget) => {
+const handleEliminarProducto = async (idTarget) => {
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
@@ -170,9 +170,16 @@ export default function App() {
           }
         });
 
-        if (res.ok) {
+        // ✨ SOLUCIÓN AL FANTASMA: Si se elimina con éxito (ok) o si ya no existe en el servidor (404)
+        if (res.ok || res.status === 404) {
+          if (res.status === 404) {
+            console.warn(`El producto con ID ${idTarget} ya no existía en la base de datos. Limpiando interfaz.`);
+          }
+          
+          // Removemos el producto del estado local de React a la fuerza para que desaparezca de la pantalla
+          setProductos(prevProductos => prevProductos.filter(p => (p.id || p._id) !== idTarget));
           setFiltroCategoria('Todas');
-          fetchData();
+          fetchData(); // Intentamos refrescar el resto de datos
         } else {
           alert("No se pudo eliminar de la base de datos.");
         }
@@ -181,7 +188,6 @@ export default function App() {
       }
     }
   };
-
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();

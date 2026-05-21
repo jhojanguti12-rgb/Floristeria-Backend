@@ -154,40 +154,43 @@ export default function App() {
     }
   };
 
+// ✅ REEMPLAZA EL BLOQUE DE LA FUNCIÓN PARA QUE QUEDE ASÍ:
 const handleEliminarProducto = async (idTarget) => {
-    if (!idTarget) {
-      alert("Error: El producto no tiene un identificador válido.");
-      return;
-    }
+  if (!idTarget) {
+    alert("Error: El producto no tiene un identificador válido.");
+    return;
+  }
 
-    if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
-          method: 'DELETE',
-          headers: { 
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        // ✨ SOLUCIÓN AL FANTASMA: Si se elimina con éxito (ok) o si ya no existe en el servidor (404)
-        if (res.ok || res.status === 404) {
-          if (res.status === 404) {
-            console.warn(`El producto con ID ${idTarget} ya no existía en la base de datos. Limpiando interfaz.`);
-          }
-          
-          // Removemos el producto del estado local de React a la fuerza para que desaparezca de la pantalla
-          setProductos(prevProductos => prevProductos.filter(p => (p.id || p._id) !== idTarget));
-          setFiltroCategoria('Todas');
-          fetchData(); // Intentamos refrescar el resto de datos
-        } else {
-          alert("No se pudo eliminar de la base de datos.");
+  if (window.confirm("¿Seguro que deseas eliminar este producto permanentemente?")) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (error) {
-        console.error("Error de red al intentar eliminar en servidor:", error);
+      });
+
+      if (res.ok || res.status === 404) {
+        if (res.status === 404) {
+          console.warn(`El producto con ID ${idTarget} ya no existía en la base de datos. Limpiando interfaz.`);
+        }
+        
+        // 🔥 CAMBIO CRÍTICO: Convertimos ambos a String para asegurar que React los reconozca y lo borre
+        setProductos(prevProductos => 
+          prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
+        );
+        
+        setFiltroCategoria('Todas');
+        fetchData(); 
+      } else {
+        alert("No se pudo eliminar de la base de datos.");
       }
+    } catch (error) {
+      console.error("Error de red al intentar eliminar en servidor:", error);
     }
-  };
+  }
+};
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();

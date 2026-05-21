@@ -13,17 +13,7 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0 
 }).format(Number(val) || 0);
 
-// MOTOR DE DETECCIÓN VISUAL POR NOMBRE
-const obtenerImagenPorDefecto = (nombre = '', categoria = '') => {
-  const n = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (n.includes('ros')) return 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600';
-  if (n.includes('girasol')) return 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=600';
-  if (n.includes('orqui') || n.includes('orch')) return 'https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?q=80&w=600';
-  if (n.includes('tulip')) return 'https://images.unsplash.com/photo-1520763185298-1b434c919102?q=80&w=600';
-  if (n.includes('clavel')) return 'https://images.unsplash.com/photo-1587334206596-f330689b9d36?q=80&w=600';
-  if (n.includes('margarita')) return 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=600';
-  return 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=600';
-};
+
 
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
@@ -478,13 +468,14 @@ export default function App() {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-                  const urlFotoReal = prod.imagen_url || prod.imagen;
+// ✅ Lógica limpia: usa la foto de la base de datos o una fija de respaldo
+const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
 
-                  const imagenSrc = urlFotoReal 
-                    ? (urlFotoReal.startsWith('/uploads/') 
-                        ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
-                        : urlFotoReal)
-                    : obtenerImagenPorDefecto(prod.nombre, displayCat);
+const imagenSrc = urlFotoReal 
+  ? (urlFotoReal.startsWith('/uploads/') 
+      ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
+      : urlFotoReal)
+  : 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; // Tu nueva foto fija de respaldo
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">

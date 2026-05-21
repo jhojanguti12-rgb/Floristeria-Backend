@@ -154,7 +154,6 @@ export default function App() {
     }
   };
 
-// ✅ REEMPLAZA EL BLOQUE DE LA FUNCIÓN PARA QUE QUEDE ASÍ:
 const handleEliminarProducto = async (idTarget) => {
   if (!idTarget) {
     alert("Error: El producto no tiene un identificador válido.");
@@ -171,20 +170,23 @@ const handleEliminarProducto = async (idTarget) => {
         }
       });
 
-      if (res.ok || res.status === 404) {
-        if (res.status === 404) {
-          console.warn(`El producto con ID ${idTarget} ya no existía en la base de datos. Limpiando interfaz.`);
-        }
-        
-        // 🔥 CAMBIO CRÍTICO: Convertimos ambos a String para asegurar que React los reconozca y lo borre
+      if (res.ok) {
+        // ✅ SI EL SERVIDOR CONFIRMA (200 OK): Borramos de pantalla y refrescamos todo
         setProductos(prevProductos => 
           prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
         );
-        
         setFiltroCategoria('Todas');
         fetchData(); 
+      } else if (res.status === 404) {
+        // ⚠️ SI DA ERROR 404 (Ruta mal configurada o no encontrado): 
+        // La borramos a la fuerza de la pantalla para que no te estorbe, 
+        // pero NO llamamos a fetchData() para que el servidor no la vuelva a traer.
+        console.warn(`El servidor devolvió 404 en la ruta de eliminación para el ID ${idTarget}.`);
+        setProductos(prevProductos => 
+          prevProductos.filter(p => String(p.id || p._id) !== String(idTarget))
+        );
       } else {
-        alert("No se pudo eliminar de la base de datos.");
+        alert("No se pudo eliminar de la base de datos. Verifica los permisos.");
       }
     } catch (error) {
       console.error("Error de red al intentar eliminar en servidor:", error);

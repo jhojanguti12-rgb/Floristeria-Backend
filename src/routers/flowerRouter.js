@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
 // 2. CREAR UNA FLOR (CON FOTO)
 router.post('/crear', verificarToken, uploadWithErrorHandler, async (req, res, next) => {
     try {
-        const imagenPath = req.file ? `/uploads/${req.file.filename}` : null;
+       const imagenPath = req.file ? req.file.path : 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600';
         const textoCategoria = req.body.categoria ? req.body.categoria.trim() : 'General';
 
         // 🔍 TRUCO INTELIGENTE: Buscamos si la categoría ya existe en MySQL

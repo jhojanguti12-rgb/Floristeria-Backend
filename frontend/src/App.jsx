@@ -126,7 +126,7 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      loading(false);
+      setLoading(false);
     }
   };
 
@@ -137,7 +137,7 @@ export default function App() {
     const categoriaInput = e.target.elements.categoria.value;
     const stockInput = e.target.elements.stock.value;
     const precioInput = e.target.elements.precio.value;
-    const fechaIngresoInput = e.target.elements.fechaIngreso.value;
+    const fechaIngresoInput = e.target.elements.fechaIngreso?.value || new Date().toISOString().split('T')[0];
 
     const formData = new FormData();
     formData.append('nombre', nombreInput);
@@ -468,14 +468,14 @@ export default function App() {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-// ✅ Lógica limpia: usa la foto de la base de datos o una fija de respaldo
-const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
+                  // ✅ Lógica limpia: usa la foto de la base de datos o una fija de respaldo
+                  const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
 
-const imagenSrc = urlFotoReal 
-  ? (urlFotoReal.startsWith('/uploads/') 
-      ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
-      : urlFotoReal)
-  : 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; // Tu nueva foto fija de respaldo
+                  const imagenSrc = urlFotoReal 
+                    ? (urlFotoReal.startsWith('/uploads/') 
+                        ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
+                        : urlFotoReal)
+                    : 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; // Tu nueva foto fija de respaldo
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
@@ -485,7 +485,8 @@ const imagenSrc = urlFotoReal
                           alt={prod.nombre} 
                           className="w-full h-full object-cover"
                           onError={(e) => { 
-                            e.target.src = obtenerImagenPorDefecto(prod.nombre, displayCat); 
+                            // ✅ Cambiado para que no dependa de la función vieja y muestre el respaldo estático
+                            e.target.src = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; 
                           }} 
                         />
                         <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
@@ -607,6 +608,10 @@ const imagenSrc = urlFotoReal
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
+            
+            {/* Botón para cerrar el modal */}
+            <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold">✖️</button>
+
             <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Agregar Nueva Flor</h3>
             
             <form onSubmit={handleAgregarProducto} className="space-y-4 text-xs font-bold text-gray-500">
@@ -652,58 +657,48 @@ const imagenSrc = urlFotoReal
                   type="file" 
                   accept="image/*" 
                   onChange={(e) => setImagenArchivo(e.target.files[0])} 
-                  className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-gray-50 text-gray-700 font-semibold focus:ring-2 ring-emerald-200 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#1b4332] file:text-white hover:file:bg-[#112a1f] file:cursor-pointer" 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-gray-50 text-gray-700 font-semibold focus:ring-2 ring-emerald-200 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#1b4332] file:text-white"
                 />
               </div>
 
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Fecha de Ingreso *</label>
-                <input type="date" name="fechaIngreso" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => { setShowModal(false); setImagenArchivo(null); }} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
-                <button type="submit" className="p-3 px-6 rounded-full bg-[#1b4332] hover:bg-[#112a1f] text-white uppercase font-black tracking-wider text-[10px]">Guardar en Inventario</button>
-              </div>
+              <button type="submit" className="w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-white p-4 rounded-full font-black uppercase tracking-widest mt-4 shadow-md transition-all">
+                Guardar Flor en la Nube
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* 🌟 MODAL FORMULARIO NUEVO: REGISTRAR UN EMPLEADO */}
+      {/* MODAL FORMULARIO: REGISTRAR EMPLEADO */}
       {showModalEmpleado && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
-            <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Registrar Empleado</h3>
+            <button onClick={() => setShowModalEmpleado(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold">✖️</button>
+            <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Registrar Personal</h3>
             
             <form onSubmit={handleCrearEmpleado} className="space-y-4 text-xs font-bold text-gray-500">
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Nombre Completo *</label>
-                <input type="text" name="emp_nombre" required placeholder="Ej. Carlos Mendoza" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+                <input type="text" name="emp_nombre" required placeholder="Ej. Jhojan Pérez" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
-
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Correo Electrónico *</label>
-                <input type="email" name="emp_email" required placeholder="carlos@floristeria.com" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+                <input type="email" name="emp_email" required placeholder="empleado@floristeriva.com" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
-
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Contraseña de Acceso *</label>
-                <input type="password" name="emp_password" required placeholder="••••••••" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-blue-200" />
+                <input type="password" name="emp_password" required placeholder="••••••••" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
               </div>
-
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Asignar Rol/Cargo *</label>
-                <select name="emp_rol" required className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold bg-white focus:ring-2 ring-blue-200">
-                  <option value="empleado">🌸 Empleado / Florista</option>
-                  <option value="admin">💼 Administrador</option>
+                <label className="block mb-1 uppercase tracking-wider">Rol / Cargo *</label>
+                <select name="emp_role" className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-white text-gray-700 font-semibold focus:ring-2 ring-emerald-200">
+                  <option value="vendedor">Vendedor / Personal</option>
+                  <option value="admin">Administrador</option>
                 </select>
               </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setShowModalEmpleado(false)} className="p-3 px-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 uppercase font-black tracking-wider text-[10px]">Cancelar</button>
-                <button type="submit" className="p-3 px-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white uppercase font-black tracking-wider text-[10px]">Dar de Alta</button>
-              </div>
+              <button type="submit" className="w-full bg-[#42a5f5] hover:bg-[#1e88e5] text-white p-4 rounded-full font-black uppercase tracking-widest mt-4 shadow-md transition-all">
+                Registrar Empleado
+              </button>
             </form>
           </div>
         </div>

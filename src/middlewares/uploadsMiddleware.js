@@ -1,27 +1,32 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// ASEGURAR QUE LA CARPETA EXISTE: Para evitar errores en Render si la carpeta se borra
-const uploadDir = 'uploads/';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+// 1. CONEXIÓN SEGURA CON CLOUDINARY (Usa tus variables de entorno del .env)
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dkvxkljkl',
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir); 
-    },
-    filename: (req, file, cb) => {
-        // Limpiamos el nombre original de espacios para evitar problemas en URLs
-        const name = file.originalname.split(' ').join('_');
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + name);
+// 2. CONFIGURACIÓN DEL ALMACENAMIENTO EN LA NUBE
+// Reemplaza a 'multer.diskStorage' manteniendo la limpieza de nombres que tenías
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'floristeria_inventario', // Carpeta automática en tu cuenta de Cloudinary
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif'], // Mantenemos tus formatos permitidos
+        public_id: (req, file) => {
+            // Limpiamos el nombre de espacios justo como lo hacías originalmente
+            const name = file.originalname.split('.')[0].split(' ').join('_');
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            return uniqueSuffix + '-' + name;
+        }
     }
 });
 
+// 3. TU FILTRO DE ARCHIVOS ORIGINAL (Se conserva intacto)
 const fileFilter = (req, file, cb) => {
-    // Aceptamos más mimetypes por si las moscas
     const tiposPermitidos = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
     
     if (tiposPermitidos.includes(file.mimetype)) {
@@ -31,15 +36,17 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
+// 4. TU CONFIGURACIÓN DE LÍMITES ORIGINAL (Se conserva intacta)
 const upload = multer({ 
-    storage: storage,
+    storage: storage, // Ahora apunta a Cloudinary
     fileFilter: fileFilter,
     limits: { 
-        fileSize: 1024 * 1024 * 10, // Aumentado a 10MB para mayor seguridad
+        fileSize: 1024 * 1024 * 10, // Mantenemos tus 10MB máximos de seguridad
         files: 1 // Solo una imagen por producto
     } 
 });
 
+// 5. TU MANEJADOR DE ERRORES ORIGINAL (Se conserva exactamente igual)
 const uploadWithErrorHandler = (req, res, next) => {
     const uploadSingle = upload.single('imagen');
 
@@ -56,4 +63,5 @@ const uploadWithErrorHandler = (req, res, next) => {
     });
 };
 
+// Exportamos exactamente lo mismo para que tus otros archivos no se rompan
 module.exports = { upload, uploadWithErrorHandler };

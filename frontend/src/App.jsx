@@ -469,13 +469,12 @@ export default function App() {
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
                   // ✅ Lógica limpia: usa la foto de la base de datos o una fija de respaldo
+           
+
+        // ✅ Lógica ultra limpia: Usa la URL directa de Cloudinary o la foto de respaldo si no hay imagen
                   const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
 
-                  const imagenSrc = urlFotoReal 
-                    ? (urlFotoReal.startsWith('/uploads/') 
-                        ? `https://floristeria-api-v2.onrender.com${urlFotoReal}` 
-                        : urlFotoReal)
-                    : 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; // Tu nueva foto fija de respaldo
+                  const imagenSrc = urlFotoReal || 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600';
 
                   return (
                     <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">

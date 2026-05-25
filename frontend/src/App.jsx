@@ -208,38 +208,61 @@ const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
-    // Detectamos el ID correcto (id o _id)
     const idTarget = productoEditando.id || productoEditando._id;
-
     if (!idTarget) {
-      alert("Error: El producto no tiene un identificador válido para editar.");
+      alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
-    try {
-      // Tomamos el valor de la categoría asegurando que no vaya vacío
-      const categoriaTexto = productoEditando.categoria || productoEditando.nombre_categoria || productoEditando.category || '';
+    // Preparar el texto de la categoría de forma segura
+    const catTexto = productoEditando.categoria || productoEditando.nombre_categoria || productoEditando.category || '';
+    
+    // Armamos un JSON con todas las combinaciones que tu Backend de Node/MySQL pueda estar esperando
+    const camposActualizar = {
+      nombre: productoEditando.nombre,
+      categoria: catTexto,
+      nombre_categoria: catTexto,
+      category: catTexto,
+      stock: Number(productoEditando.stock),
+      stock_actual: Number(productoEditando.stock),
+      cantidad: Number(productoEditando.stock),
+      precio: Number(productoEditando.precio),
+      precio_unitario: Number(productoEditando.precio)
+    };
 
-      const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
+    // Intentamos primero con la ruta primaria (/flores)
+    let urlTarget = `${API_BASE_URL}/flores/${idTarget}`;
+    
+    try {
+      let res = await fetch(urlTarget, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          nombre: productoEditando.nombre,
-          categoria: categoriaTexto,
-          nombre_categoria: categoriaTexto, // Enviamos ambos por si tu backend lee uno u otro
-          stock: Number(productoEditando.stock),
-          precio: Number(productoEditando.precio)
-        }),
+        body: JSON.stringify(camposActualizar),
       });
 
+      // Si da error 404 o falla, intentamos automáticamente con la ruta alternativa (/productos)
+      if (!res.ok && (res.status === 404 || res.status === 403)) {
+        console.log("Intentando con ruta alternativa /productos...");
+        urlTarget = `${API_BASE_URL}/productos/${idTarget}`;
+        res = await fetch(urlTarget, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(camposActualizar),
+        });
+      }
+
       if (res.ok) {
-        // Actualizamos el estado local en React inmediatamente
         setProductos(prevProductos =>
           prevProductos.map(p => 
-            String(p.id || p._id) === String(idTarget) ? { ...p, ...productoEditando, categoria: categoriaTexto, nombre_categoria: categoriaTexto } : p
+            String(p.id || p._id) === String(idTarget) 
+              ? { ...p, ...productoEditando, categoria: catTexto, nombre_categoria: catTexto } 
+              : p
           )
         );
         
@@ -247,18 +270,16 @@ const handleActualizarProducto = async (e) => {
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente!');
         
-        // Refrescamos la tabla/mosaico de flores
         if (typeof fetchData === 'function') {
           fetchData();
         }
       } else {
-        // Si el backend responde un error, intentamos leer qué dice para no mostrar "Error desconocido"
         const errorData = await res.json().catch(() => ({}));
-        alert(`No se pudo actualizar en la base de datos: ${errorData.mensaje || errorData.error || 'Verifica los campos o los permisos del usuario.'}`);
+        alert(`Error en Servidor (${res.status}): ${errorData.mensaje || errorData.error || 'Estructura o permisos incorrectos en el Backend.'}`);
       }
     } catch (error) {
-      console.error("Error de red al intentar actualizar:", error);
-      alert('Hubo un error de red al intentar conectar con el servidor de Render.');
+      console.error("Error de red:", error);
+      alert('Error de red al conectar con Render.');
     }
   };
 

@@ -204,11 +204,11 @@ const [showModalEditar, setShowModalEditar] = useState(false);
       }
     }
   };
-  const handleActualizarProducto = async (e) => {
+const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
-    // Extraemos el identificador exacto del producto objetivo
+    // Detectamos el ID correcto (id o _id)
     const idTarget = productoEditando.id || productoEditando._id;
 
     if (!idTarget) {
@@ -217,6 +217,9 @@ const [showModalEditar, setShowModalEditar] = useState(false);
     }
 
     try {
+      // Tomamos el valor de la categoría asegurando que no vaya vacío
+      const categoriaTexto = productoEditando.categoria || productoEditando.nombre_categoria || productoEditando.category || '';
+
       const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
         method: 'PUT',
         headers: {
@@ -225,18 +228,18 @@ const [showModalEditar, setShowModalEditar] = useState(false);
         },
         body: JSON.stringify({
           nombre: productoEditando.nombre,
-          // Soportamos las variaciones de nombres de categorías que manejas en tu base de datos
-          categoria: productoEditando.categoria || productoEditando.nombre_categoria,
+          categoria: categoriaTexto,
+          nombre_categoria: categoriaTexto, // Enviamos ambos por si tu backend lee uno u otro
           stock: Number(productoEditando.stock),
           precio: Number(productoEditando.precio)
         }),
       });
 
       if (res.ok) {
-        // Actualizamos de inmediato el estado local en React
+        // Actualizamos el estado local en React inmediatamente
         setProductos(prevProductos =>
           prevProductos.map(p => 
-            String(p.id || p._id) === String(idTarget) ? productoEditando : p
+            String(p.id || p._id) === String(idTarget) ? { ...p, ...productoEditando, categoria: categoriaTexto, nombre_categoria: categoriaTexto } : p
           )
         );
         
@@ -244,17 +247,18 @@ const [showModalEditar, setShowModalEditar] = useState(false);
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente!');
         
-        // Refrescamos los datos generales de la app tal como lo haces al eliminar
+        // Refrescamos la tabla/mosaico de flores
         if (typeof fetchData === 'function') {
           fetchData();
         }
       } else {
+        // Si el backend responde un error, intentamos leer qué dice para no mostrar "Error desconocido"
         const errorData = await res.json().catch(() => ({}));
-        alert(`No se pudo actualizar en la base de datos: ${errorData.mensaje || 'Error desconocido'}`);
+        alert(`No se pudo actualizar en la base de datos: ${errorData.mensaje || errorData.error || 'Verifica los campos o los permisos del usuario.'}`);
       }
     } catch (error) {
       console.error("Error de red al intentar actualizar:", error);
-      alert('Hubo un error de red al intentar conectar con el servidor.');
+      alert('Hubo un error de red al intentar conectar con el servidor de Render.');
     }
   };
 

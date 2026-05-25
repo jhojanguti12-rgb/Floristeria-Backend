@@ -208,78 +208,68 @@ const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
-    const idTarget = productoEditando.id || productoEditando._id;
+    // Detectamos el ID numérico del producto (el que usa tu tabla de MySQL)
+    const idTarget = productoEditando.id;
+
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
-    // Preparar el texto de la categoría de forma segura
+    // Extraemos el texto de la categoría de forma segura
     const catTexto = productoEditando.categoria || productoEditando.nombre_categoria || productoEditando.category || '';
-    
-    // Armamos un JSON con todas las combinaciones que tu Backend de Node/MySQL pueda estar esperando
-    const camposActualizar = {
+
+    // Estructuramos el JSON con los nombres exactos de las columnas de tu MySQL
+    const datosEnviar = {
       nombre: productoEditando.nombre,
       categoria: catTexto,
-      nombre_categoria: catTexto,
-      category: catTexto,
       stock: Number(productoEditando.stock),
-      stock_actual: Number(productoEditando.stock),
-      cantidad: Number(productoEditando.stock),
-      precio: Number(productoEditando.precio),
-      precio_unitario: Number(productoEditando.precio)
+      precio: Number(productoEditando.precio)
     };
 
-    // Intentamos primero con la ruta primaria (/flores)
-    let urlTarget = `${API_BASE_URL}/flores/${idTarget}`;
-    
     try {
-      let res = await fetch(urlTarget, {
+      // Hacemos la petición PUT a la ruta de tu API
+      const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(camposActualizar),
+        body: JSON.stringify(datosEnviar),
       });
 
-      // Si da error 404 o falla, intentamos automáticamente con la ruta alternativa (/productos)
-      if (!res.ok && (res.status === 404 || res.status === 403)) {
-        console.log("Intentando con ruta alternativa /productos...");
-        urlTarget = `${API_BASE_URL}/productos/${idTarget}`;
-        res = await fetch(urlTarget, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(camposActualizar),
-        });
-      }
-
       if (res.ok) {
+        // 1. Actualizamos el estado local en React inmediatamente para que se vea el cambio en pantalla
         setProductos(prevProductos =>
           prevProductos.map(p => 
-            String(p.id || p._id) === String(idTarget) 
-              ? { ...p, ...productoEditando, categoria: catTexto, nombre_categoria: catTexto } 
+            String(p.id) === String(idTarget) 
+              ? { 
+                  ...p, 
+                  nombre: productoEditando.nombre,
+                  categoria: catTexto,
+                  stock: Number(productoEditando.stock),
+                  precio: Number(productoEditando.precio)
+                } 
               : p
           )
         );
         
+        // 2. Cerramos el modal de edición y limpiamos el producto seleccionado
         setShowModalEditar(false);
         setProductoEditando(null);
-        alert('¡Flor actualizada correctamente!');
+        alert('¡Flor actualizada correctamente en la base de datos!');
         
+        // 3. Volvemos a consultar al backend para garantizar que todo esté sincronizado
         if (typeof fetchData === 'function') {
           fetchData();
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Error en Servidor (${res.status}): ${errorData.mensaje || errorData.error || 'Estructura o permisos incorrectos en el Backend.'}`);
+        alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Revisa la consola del backend.'}`);
       }
     } catch (error) {
-      console.error("Error de red:", error);
-      alert('Error de red al conectar con Render.');
+      console.error("Error de red al intentar actualizar:", error);
+      alert('Error de conexión: No se pudo conectar con el servidor de Render.');
     }
   };
 

@@ -7,12 +7,13 @@ const productoService = {
         return rows;
     },
 
-// 🌟 ACTUALIZADO: Cambiamos 'categoria' por 'nombre_categoria' para que MySQL no de error
+// 🌟 ACTUALIZADO: Estructura exacta basada en tu esquema físico de MySQL
     updateFlor: async (id, datos) => {
-        const { nombre, categoria, stock, precio } = datos;
-        // Cambiado aquí: nombre_categoria = ?
-        const query = 'UPDATE flores SET nombre = ?, nombre_categoria = ?, stock = ?, precio = ? WHERE id = ?';
-        const [result] = await db.query(query, [nombre, categoria, stock, precio, id]);
+        const { nombre, stock, precio } = datos;
+        
+        // Modificamos únicamente los campos editables del modal que coinciden con tus columnas de MySQL
+        const query = 'UPDATE flores SET nombre = ?, stock = ?, precio = ? WHERE id = ?';
+        const [result] = await db.query(query, [nombre, stock, precio, id]);
         
         if (result.affectedRows === 0) {
             throw new Error('No se encontró ninguna flor con ese ID para actualizar');

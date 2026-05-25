@@ -208,24 +208,22 @@ const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
+    // Detectamos el ID numérico de la fila
     const idTarget = productoEditando.id || productoEditando._id;
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
-    // Tomamos el valor de la categoría
-    const catTexto = productoEditando.nombre_categoria || productoEditando.categoria || '';
-
+    // Estructuramos el JSON limpio con los tipos de datos correctos para tu servidor
     const datosEnviar = {
       nombre: productoEditando.nombre,
-      categoria: catTexto, // El backend lo recibe como 'categoria' en el req.body y lo mapea a MySQL
       stock: Number(productoEditando.stock),
       precio: Number(productoEditando.precio)
     };
 
     try {
-      // Usamos de forma directa la ruta exacta que procesó el backend según el log
+      // Apuntamos directamente a la ruta que procesó el backend (/api/productos/:id)
       const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
         method: 'PUT',
         headers: {
@@ -236,14 +234,13 @@ const handleActualizarProducto = async (e) => {
       });
 
       if (res.ok) {
+        // 1. Refrescamos el estado de React al instante
         setProductos(prevProductos =>
           prevProductos.map(p => 
             String(p.id || p._id) === String(idTarget) 
               ? { 
                   ...p, 
                   nombre: productoEditando.nombre,
-                  nombre_categoria: catTexto,
-                  categoria: catTexto,
                   stock: Number(productoEditando.stock),
                   precio: Number(productoEditando.precio)
                 } 
@@ -251,20 +248,22 @@ const handleActualizarProducto = async (e) => {
           )
         );
         
+        // 2. Cerramos el modal de edición
         setShowModalEditar(false);
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente en la base de datos!');
         
+        // 3. Sincronizamos los datos con la API de Render
         if (typeof fetchData === 'function') {
           fetchData();
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos.'}`);
+        alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
       }
     } catch (error) {
       console.error("Error de red al intentar actualizar:", error);
-      alert('Error de conexión con el servidor.');
+      alert('Error de conexión con el servidor de Render.');
     }
   };
   // 🌟 FUNCIÓN NUEVA: ENVIAR FORMULARIO DE NUEVO EMPLEADO AL BACKEND

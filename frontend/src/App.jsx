@@ -34,6 +34,8 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
   const [imagenArchivo, setImagenArchivo] = useState(null);
+const [showModalEditar, setShowModalEditar] = useState(false);
+  const [productoEditando, setProductoEditando] = useState(null);
 
   // EXTRACCIÓN DINÁMICA DE CATEGORÍAS
   const categoriasExistentes = [
@@ -200,6 +202,59 @@ export default function App() {
       } catch (error) {
         console.error("Error de red al intentar eliminar:", error);
       }
+    }
+  };
+  const handleActualizarProducto = async (e) => {
+    e.preventDefault();
+    if (!productoEditando) return;
+
+    // Extraemos el identificador exacto del producto objetivo
+    const idTarget = productoEditando.id || productoEditando._id;
+
+    if (!idTarget) {
+      alert("Error: El producto no tiene un identificador válido para editar.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/flores/${idTarget}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          nombre: productoEditando.nombre,
+          // Soportamos las variaciones de nombres de categorías que manejas en tu base de datos
+          categoria: productoEditando.categoria || productoEditando.nombre_categoria,
+          stock: Number(productoEditando.stock),
+          precio: Number(productoEditando.precio)
+        }),
+      });
+
+      if (res.ok) {
+        // Actualizamos de inmediato el estado local en React
+        setProductos(prevProductos =>
+          prevProductos.map(p => 
+            String(p.id || p._id) === String(idTarget) ? productoEditando : p
+          )
+        );
+        
+        setShowModalEditar(false);
+        setProductoEditando(null);
+        alert('¡Flor actualizada correctamente!');
+        
+        // Refrescamos los datos generales de la app tal como lo haces al eliminar
+        if (typeof fetchData === 'function') {
+          fetchData();
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`No se pudo actualizar en la base de datos: ${errorData.mensaje || 'Error desconocido'}`);
+      }
+    } catch (error) {
+      console.error("Error de red al intentar actualizar:", error);
+      alert('Hubo un error de red al intentar conectar con el servidor.');
     }
   };
 
@@ -500,11 +555,25 @@ export default function App() {
                           <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">{prod.stock} und</span></p>
                         </div>
                         
-                        <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-50">
-                          <span className="text-xl font-black text-[#1b4332]">{formatCOP(prod.precio)}</span>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleEliminarProducto(prodId)} className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all">🗑️ Eliminar</button>
-                          </div>
+                        <div className="flex gap-3">
+                          {/* ✏️ BOTÓN EDITAR */}
+                          <button 
+                            onClick={() => {
+                              setProductoEditando(prod);
+                              setShowModalEditar(true);
+                            }} 
+                            className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-all flex items-center gap-1"
+                          >
+                            ✏️ Editar
+                          </button>
+
+                          {/* 🗑️ BOTÓN ELIMINAR */}
+                          <button 
+                            onClick={() => handleEliminarProducto(prodId)} 
+                            className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all flex items-center gap-1"
+                          >
+                            🗑️ Eliminar
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -690,13 +759,87 @@ export default function App() {
               </div>
               <div>
                 <label className="block mb-1 uppercase tracking-wider">Rol / Cargo *</label>
-                <select name="emp_role" className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-white text-gray-700 font-semibold focus:ring-2 ring-emerald-200">
+                <select name="emp_rol" className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-white text-gray-700 font-semibold focus:ring-2 ring-emerald-200">
                   <option value="vendedor">Vendedor / Personal</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
               <button type="submit" className="w-full bg-[#42a5f5] hover:bg-[#1e88e5] text-white p-4 rounded-full font-black uppercase tracking-widest mt-4 shadow-md transition-all">
                 Registrar Empleado
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 NUEVO MODAL FORMULARIO: EDITAR PRODUCTO EXISTENTE */}
+      {showModalEditar && productoEditando && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
+            
+            {/* Botón para cerrar el modal */}
+            <button 
+              onClick={() => { setShowModalEditar(false); setProductoEditando(null); }} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold"
+            >
+              ✖️
+            </button>
+
+            <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Editar Flor</h3>
+            
+            <form onSubmit={handleActualizarProducto} className="space-y-4 text-xs font-bold text-gray-500">
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Nombre del Producto *</label>
+                <input 
+                  type="text" 
+                  value={productoEditando.nombre || ''} 
+                  onChange={(e) => setProductoEditando({...productoEditando, nombre: e.target.value})}
+                  required 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
+                <input 
+                  type="text" 
+                  value={productoEditando.nombre_categoria || productoEditando.categoria || productoEditando.category || ''} 
+                  onChange={(e) => setProductoEditando({...productoEditando, categoria: e.target.value, nombre_categoria: e.target.value})}
+                  required 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block mb-1 uppercase tracking-wider">Stock Actual *</label>
+                  <input 
+                    type="number" 
+                    value={productoEditando.stock ?? 0} 
+                    onChange={(e) => setProductoEditando({...productoEditando, stock: e.target.value})}
+                    required 
+                    min="0" 
+                    className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario ($) *</label>
+                  <input 
+                    type="number" 
+                    value={productoEditando.precio ?? 0} 
+                    onChange={(e) => setProductoEditando({...productoEditando, precio: e.target.value})}
+                    required 
+                    min="0" 
+                    className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#123023] mt-4"
+              >
+                Guardar Cambios
               </button>
             </form>
           </div>

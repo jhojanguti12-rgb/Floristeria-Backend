@@ -7,10 +7,11 @@ const productoService = {
         return rows;
     },
 
-    // 🌟 NUEVO: Actualizar todos los datos de una flor (Nombre, Categoría, Stock y Precio)
+// 🌟 ACTUALIZADO: Cambiamos 'categoria' por 'nombre_categoria' para que MySQL no de error
     updateFlor: async (id, datos) => {
         const { nombre, categoria, stock, precio } = datos;
-        const query = 'UPDATE flores SET nombre = ?, categoria = ?, stock = ?, precio = ? WHERE id = ?';
+        // Cambiado aquí: nombre_categoria = ?
+        const query = 'UPDATE flores SET nombre = ?, nombre_categoria = ?, stock = ?, precio = ? WHERE id = ?';
         const [result] = await db.query(query, [nombre, categoria, stock, precio, id]);
         
         if (result.affectedRows === 0) {

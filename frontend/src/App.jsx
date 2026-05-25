@@ -208,66 +208,42 @@ const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
-    // Detectamos el ID usando exactamente la misma lógica que tu función handleEliminarProducto
-    const idTarget = productoEditando.id || productoEditando._id || productoEditando.id_producto;
-
+    const idTarget = productoEditando.id || productoEditando._id;
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
-    // Extraemos el texto de la categoría de forma segura
-    const catTexto = productoEditando.categoria || productoEditando.nombre_categoria || productoEditando.category || '';
+    // Tomamos el valor de la categoría
+    const catTexto = productoEditando.nombre_categoria || productoEditando.categoria || '';
 
-    // Estructuramos el JSON limpio que tu nuevo backend editado espera recibir
     const datosEnviar = {
       nombre: productoEditando.nombre,
-      categoria: catTexto,
+      categoria: catTexto, // El backend lo recibe como 'categoria' en el req.body y lo mapea a MySQL
       stock: Number(productoEditando.stock),
       precio: Number(productoEditando.precio)
     };
 
-    // Al ver el error 404 persistente en la consola, probamos directamente con el endpoint de productos alternativo
-    // e intentamos dinámicamente con ambas rutas (/flores o /productos) para asegurar el tiro.
-    const rutasAProbar = [
-      `${API_BASE_URL}/productos/${idTarget}`,
-      `${API_BASE_URL}/flores/${idTarget}`
-    ];
-
-    let peticionExitosa = false;
-    let ultimaRespuesta = null;
-
     try {
-      for (const url of rutasAProbar) {
-        console.log(`Intentando actualizar en la ruta: ${url}`);
-        const res = await fetch(url, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(datosEnviar),
-        });
+      // Usamos de forma directa la ruta exacta que procesó el backend según el log
+      const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(datosEnviar),
+      });
 
-        if (res.ok) {
-          peticionExitosa = true;
-          ultimaRespuesta = res;
-          break; // Rompemos el ciclo si el backend procesó el PUT con éxito
-        } else {
-          ultimaRespuesta = res;
-        }
-      }
-
-      if (peticionExitosa) {
-        // 1. Actualizamos el estado local en React inmediatamente para refrescar la interfaz
+      if (res.ok) {
         setProductos(prevProductos =>
           prevProductos.map(p => 
             String(p.id || p._id) === String(idTarget) 
               ? { 
                   ...p, 
                   nombre: productoEditando.nombre,
-                  categoria: catTexto,
                   nombre_categoria: catTexto,
+                  categoria: catTexto,
                   stock: Number(productoEditando.stock),
                   precio: Number(productoEditando.precio)
                 } 
@@ -275,25 +251,22 @@ const handleActualizarProducto = async (e) => {
           )
         );
         
-        // 2. Cerramos el modal de edición y limpiamos la selección
         setShowModalEditar(false);
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente en la base de datos!');
         
-        // 3. Volvemos a consultar al backend para garantizar la sincronización global
         if (typeof fetchData === 'function') {
           fetchData();
         }
       } else {
-        const errorData = await ultimaRespuesta.json().catch(() => ({}));
-        alert(`Error al guardar cambios (${ultimaRespuesta ? ultimaRespuesta.status : '404'}): ${errorData.error || errorData.mensaje || 'Ruta no encontrada o estructura rechazada por el backend.'}`);
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos.'}`);
       }
     } catch (error) {
       console.error("Error de red al intentar actualizar:", error);
-      alert('Error de conexión: No se pudo conectar con el servidor de Render.');
+      alert('Error de conexión con el servidor.');
     }
   };
-
   // 🌟 FUNCIÓN NUEVA: ENVIAR FORMULARIO DE NUEVO EMPLEADO AL BACKEND
   const handleCrearEmpleado = async (e) => {
     e.preventDefault();

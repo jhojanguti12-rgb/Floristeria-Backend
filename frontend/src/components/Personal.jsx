@@ -203,7 +203,7 @@ const Personal = ({ user, API_BASE_URL }) => {
             {/* Encabezado del Modal */}
             <div className="bg-[#1b4332] p-6 text-white flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tight">Alta de Nuevo Personal</h3>
+                <h3 className="text-xl font-black uppercase tracking-tight">Nuevo Personal</h3>
                 <p className="text-emerald-200/80 text-[11px] font-bold mt-0.5">Asigna credenciales seguras y roles al equipo.</p>
               </div>
               <button 

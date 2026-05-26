@@ -102,18 +102,12 @@ const usuarioService = {
      * Filtra la base de datos para traer únicamente administradores y empleados,
      * excluyendo las contraseñas por seguridad.
      */
+// 🌟 REEMPLAZADO: Trae de forma limpia los campos que el frontend necesita mostrar
     getAllPersonal: async () => {
-        try {
-            // Buscamos usuarios cuyo rol NO sea 'cliente'
-            const query = 'SELECT id, nombre, email, rol FROM usuarios WHERE rol != "cliente"';
-            const [results] = await db.query(query);
-            return results;
-        } catch (error) {
-            console.error("❌ Error en getAllPersonal:", error.message);
-            throw error;
-        }
+        const query = 'SELECT id, nombre, email, rol FROM usuarios';
+        const [rows] = await db.query(query);
+        return rows;
     },
-
     /**
      * 🌟 5. Eliminar un usuario del personal por ID
      */

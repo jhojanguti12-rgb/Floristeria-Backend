@@ -626,6 +626,21 @@ const handleActualizarProducto = async (e) => {
 {activeTab === 'personal' && (
   <Personal user={user} API_BASE_URL={API_BASE_URL} />
 )}
+{activeTab === 'pedidos' && (
+          <Pedidos user={user} API_BASE_URL={API_BASE_URL} />
+        )}
+
+
+
+
+
+
+
+
+
+
+
+        
       </main>
 
       {/* MODAL FORMULARIO: AGREGAR FLOR */}

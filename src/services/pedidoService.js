@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 const pedidoService = {
-    // 1. Obtener todos los pedidos con nombres de clientes
+    // 1. Obtener todos los pedidos con nombres de clientes (Tu ruta original)
     getAllPedidos: async () => {
         try {
             // USAMOS LEFT JOIN para traer el nombre desde la tabla clientes
@@ -34,7 +34,7 @@ const pedidoService = {
         }
     },
 
-    // 2. Crear pedido y DESCONTAR STOCK (Transacción completa)
+    // 2. Crear pedido y DESCONTAR STOCK (Tu ruta original - Transacción completa)
     createPedido: async (data) => {
         const { id_cliente, id_empleado, total, productos } = data;
 
@@ -82,6 +82,67 @@ const pedidoService = {
             throw error;
         } finally {
             connection.release(); 
+        }
+    },
+
+    // =========================================================
+    // 🌟 NUEVAS FUNCIONES EXCLUSIVAS PARA EL ADMIN PANEL (PEDIDOS)
+    // =========================================================
+
+    // 3. Obtener lista de pedidos completa mapeada para el panel de administración
+    getAdminPedidosLista: async () => {
+        try {
+            const query = `
+                SELECT 
+                    p.id, 
+                    p.total, 
+                    p.estado, 
+                    p.fecha_pedido AS fecha,
+                    p.direccion_entrega, 
+                    p.telefono_contacto, 
+                    p.dedicatoria,
+                    COALESCE(u.nombre, 'Comprador Web') AS cliente
+                FROM pedidos p
+                LEFT JOIN usuarios u ON p.id_cliente = u.id
+                ORDER BY p.id DESC`;
+
+            const [results] = await db.query(query);
+            return results;
+        } catch (error) {
+            console.error("❌ Error en getAdminPedidosLista:", error.message);
+            throw error;
+        }
+    },
+
+    // 4. Obtener el desglose de arreglos florales de un pedido en base a su ID
+    getAdminPedidoDetalle: async (id_pedido) => {
+        try {
+            const query = `
+                SELECT 
+                    dp.cantidad, 
+                    dp.precio_unitario AS precio, 
+                    f.nombre
+                FROM detalle_pedido dp
+                JOIN flores f ON dp.id_flor = f.id
+                WHERE dp.id_pedido = ?`;
+
+            const [results] = await db.query(query, [id_pedido]);
+            return results;
+        } catch (error) {
+            console.error("❌ Error en getAdminPedidoDetalle:", error.message);
+            throw error;
+        }
+    },
+
+    // 5. Actualizar el estado logístico de un pedido (Pendiente, En Preparacion, etc.)
+    updatePedidoEstado: async (id, estado) => {
+        try {
+            const query = 'UPDATE pedidos SET estado = ? WHERE id = ?';
+            await db.query(query, [estado, id]);
+            return { mensaje: "✅ Estado de la orden modificado exitosamente." };
+        } catch (error) {
+            console.error("❌ Error en updatePedidoEstado:", error.message);
+            throw error;
         }
     }
 };

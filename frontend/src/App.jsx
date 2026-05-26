@@ -5,6 +5,7 @@ import {
 
 import fondoJardin from './fondo-jardin.jpg';
 import Personal from './components/Personal';
+import Pedidos from './components/Pedidos';
 
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
@@ -407,9 +408,14 @@ const handleActualizarProducto = async (e) => {
             <span className="text-lg">📦</span> <span>Inventario</span>
           </div>
           
-          {/* 🌟 ENLACE DE NAVEGACIÓN NUEVO EN EL MENÚ LATERAL */}
+       {/* Enlace de navegación para Personal */}
           <div onClick={() => { setActiveTab('personal'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'personal' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🧑‍💼</span> <span>Personal</span>
+          </div>
+
+          {/* Enlace de navegación para Pedidos */}
+          <div onClick={() => { setActiveTab('pedidos'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'pedidos' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+            <span className="text-lg">🧾</span> <span>Pedidos</span>
           </div>
         </nav>
         

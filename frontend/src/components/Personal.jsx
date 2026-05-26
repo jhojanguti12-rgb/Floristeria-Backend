@@ -10,14 +10,26 @@ const Personal = ({ user, API_BASE_URL }) => {
     nombre: '',
     email: '',
     password: '',
-    confirmPassword: '', // 🌟 NUEVO: Campo de confirmación
+    confirmPassword: '',
     rol: 'empleado'
   });
   const [guardando, setGuardando] = useState(false);
 
+  // 🌟 NUEVO: Estados para alternar la visibilidad de las contraseñas
+  const [verPassword, setVerPassword] = useState(false);
+  const [verConfirmPassword, setVerConfirmPassword] = useState(false);
+
   useEffect(() => {
     fetchPersonal();
   }, []);
+
+  // Al cerrar o abrir el modal, reiniciamos la visibilidad a oculto por seguridad
+  useEffect(() => {
+    if (!mostrarModal) {
+      setVerPassword(false);
+      setVerConfirmPassword(false);
+    }
+  }, [mostrarModal]);
 
   const fetchPersonal = async () => {
     try {
@@ -51,9 +63,7 @@ const Personal = ({ user, API_BASE_URL }) => {
     });
   };
 
-  // 🌟 VALIDACIÓN PRÁCTICA: ¿Coinciden las contraseñas?
   const contrasenasCoinciden = nuevoUsuario.password === nuevoUsuario.confirmPassword;
-  // Solo avisar que no coinciden si el usuario ya empezó a escribir en el segundo campo
   const mostrarErrorContrasena = nuevoUsuario.confirmPassword.length > 0 && !contrasenasCoinciden;
 
   const handleRegistrarEmpleado = async (e) => {
@@ -195,7 +205,7 @@ const Personal = ({ user, API_BASE_URL }) => {
         </div>
       </div>
 
-      {/* 🌟 INTERFAZ PROFESIONAL: MODAL DE NUEVO PERSONAL */}
+      {/* MODAL DE NUEVO PERSONAL */}
       {mostrarModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
@@ -217,7 +227,7 @@ const Personal = ({ user, API_BASE_URL }) => {
             {/* Formulario */}
             <form onSubmit={handleRegistrarEmpleado} className="p-8 space-y-6">
               
-              {/* Sección 1: Datos de Identificación (Dos columnas) */}
+              {/* Sección 1: Datos de Identificación */}
               <div>
                 <span className="text-[#1b4332] font-black text-[11px] uppercase tracking-wider block mb-3 border-b border-gray-100 pb-1">📋 Datos de Identificación</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,37 +260,64 @@ const Personal = ({ user, API_BASE_URL }) => {
                 </div>
               </div>
 
-              {/* Sección 2: Seguridad y Permisos (Dos columnas) */}
+              {/* Sección 2: Seguridad y Permisos */}
               <div>
                 <span className="text-[#1b4332] font-black text-[11px] uppercase tracking-wider block mb-3 border-b border-gray-100 pb-1">🔐 Seguridad y Permisos</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* Campo Contraseña con Ojo Interactiva */}
                   <div>
                     <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Contraseña</label>
-                    <input 
-                      type="password"
-                      name="password"
-                      value={nuevoUsuario.password}
-                      onChange={handleInputChange}
-                      placeholder="Mínimo 6 caracteres"
-                      className={`w-full bg-gray-50 border rounded-xl p-3 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
-                      required
-                    />
+                    <div className="relative">
+                      <input 
+                        type={verPassword ? "text" : "password"} // 🌟 Tipo dinámico
+                        name="password"
+                        value={nuevoUsuario.password}
+                        onChange={handleInputChange}
+                        placeholder="Mínimo 6 caracteres"
+                        className={`w-full bg-gray-50 border rounded-xl p-3 pr-10 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
+                        required
+                      />
+                      {/* Botón Ojo */}
+                      <button
+                        type="button"
+                        onClick={() => setVerPassword(!verPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm p-1 focus:outline-none"
+                        title={verPassword ? "Ocultar Contraseña" : "Mostrar Contraseña"}
+                      >
+                        {verPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Campo Confirmar Contraseña con Ojo Interactiva */}
                   <div>
                     <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Confirmar Contraseña</label>
-                    <input 
-                      type="password"
-                      name="confirmPassword"
-                      value={nuevoUsuario.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="Repite la contraseña"
-                      className={`w-full bg-gray-50 border rounded-xl p-3 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : nuevoUsuario.confirmPassword && contrasenasCoinciden ? 'border-emerald-400 focus:border-emerald-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
-                      required
-                    />
+                    <div className="relative">
+                      <input 
+                        type={verConfirmPassword ? "text" : "password"} // 🌟 Tipo dinámico
+                        name="confirmPassword"
+                        value={nuevoUsuario.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Repite la contraseña"
+                        className={`w-full bg-gray-50 border rounded-xl p-3 pr-10 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : nuevoUsuario.confirmPassword && contrasenasCoinciden ? 'border-emerald-400 focus:border-emerald-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
+                        required
+                      />
+                      {/* Botón Ojo */}
+                      <button
+                        type="button"
+                        onClick={() => setVerConfirmPassword(!verConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm p-1 focus:outline-none"
+                        title={verConfirmPassword ? "Ocultar Contraseña" : "Mostrar Contraseña"}
+                      >
+                        {verConfirmPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
                   </div>
+
                 </div>
 
-                {/* Mensaje de Error en Tiempo Real */}
+                {/* Mensajes de Validación */}
                 {mostrarErrorContrasena && (
                   <p className="text-red-500 font-bold text-xs mt-2 animate-pulse">
                     ❌ Las contraseñas no coinciden. Inténtalo de nuevo.

@@ -4,17 +4,17 @@ const Personal = ({ user, API_BASE_URL }) => {
   const [empleados, setEmpleados] = useState([]);
   const [cargando, setCargando] = useState(true);
   
-  // Estados para controlar el modal y el formulario de registro
+  // Estados para el modal y el formulario
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'empleado' // Rol por defecto en el select
+    confirmPassword: '', // 🌟 NUEVO: Campo de confirmación
+    rol: 'empleado'
   });
   const [guardando, setGuardando] = useState(false);
 
-  // Carga automáticamente el personal al entrar a la sección
   useEffect(() => {
     fetchPersonal();
   }, []);
@@ -34,16 +34,15 @@ const Personal = ({ user, API_BASE_URL }) => {
       if (res.ok) {
         setEmpleados(data);
       } else {
-        console.error("Error del servidor al obtener personal:", data.error);
+        console.error("Error al obtener personal:", data.error);
       }
     } catch (error) {
-      console.error("Error de red al cargar personal:", error);
+      console.error("Error de red:", error);
     } finally {
       setCargando(false);
     }
   };
 
-  // Función para capturar los datos que escribe el usuario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNuevoUsuario({
@@ -52,13 +51,21 @@ const Personal = ({ user, API_BASE_URL }) => {
     });
   };
 
-  // Función para enviar el formulario al Backend
+  // 🌟 VALIDACIÓN PRÁCTICA: ¿Coinciden las contraseñas?
+  const contrasenasCoinciden = nuevoUsuario.password === nuevoUsuario.confirmPassword;
+  // Solo avisar que no coinciden si el usuario ya empezó a escribir en el segundo campo
+  const mostrarErrorContrasena = nuevoUsuario.confirmPassword.length > 0 && !contrasenasCoinciden;
+
   const handleRegistrarEmpleado = async (e) => {
-    e.preventDefault(); // Evita que se recargue la página
+    e.preventDefault();
     
-    // Validación básica en el frontend
-    if (!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.password) {
-      alert("Por favor, rellena todos los campos.");
+    if (!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.password || !nuevoUsuario.confirmPassword) {
+      alert("⚠️ Por favor, rellena todos los campos.");
+      return;
+    }
+
+    if (!contrasenasCoinciden) {
+      alert("❌ Las contraseñas no coinciden. Verifica antes de guardar.");
       return;
     }
 
@@ -70,31 +77,34 @@ const Personal = ({ user, API_BASE_URL }) => {
           'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(nuevoUsuario)
+        body: JSON.stringify({
+          nombre: nuevoUsuario.nombre,
+          email: nuevoUsuario.email,
+          password: nuevoUsuario.password,
+          rol: nuevoUsuario.rol
+        })
       });
 
       const data = await res.json();
 
       if (res.ok) {
         alert("✅ Usuario registrado exitosamente en el equipo.");
-        setMostrarModal(false); // Cerramos el modal flotante
-        setNuevoUsuario({ nombre: '', email: '', password: '', rol: 'empleado' }); // Limpiamos formulario
-        fetchPersonal(); // Recargamos la tabla al instante
+        setMostrarModal(false);
+        setNuevoUsuario({ nombre: '', email: '', password: '', confirmPassword: '', rol: 'empleado' });
+        fetchPersonal();
       } else {
         alert(data.mensaje || "No se pudo registrar al usuario.");
       }
     } catch (error) {
-      console.error("Error al registrar:", error);
+      console.error(error);
       alert("Error de red al intentar registrar.");
     } finally {
       setGuardando(false);
     }
   };
 
-  // Función para eliminar un empleado
   const handleEliminarEmpleado = async (id) => {
     if (!window.confirm("¿Estás seguro de que deseas dar de baja a este empleado?")) return;
-    
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/personal/${id}`, {
         method: 'DELETE',
@@ -102,15 +112,14 @@ const Personal = ({ user, API_BASE_URL }) => {
           'Authorization': `Bearer ${user?.token}`
         }
       });
-      
       if (res.ok) {
         alert("Empleado dado de baja correctamente.");
-        fetchPersonal(); // Recargamos la lista
+        fetchPersonal();
       } else {
         alert("No se pudo eliminar al empleado.");
       }
     } catch (error) {
-      console.error("Error al eliminar:", error);
+      console.error(error);
     }
   };
 
@@ -124,21 +133,21 @@ const Personal = ({ user, API_BASE_URL }) => {
 
   return (
     <div>
+      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Equipo de Trabajo</h2>
           <p className="text-gray-400 font-bold text-xs mt-1">Lista de empleados y administradores de la floristería.</p>
         </div>
-        
-        {/* Cambiamos el alert por la apertura del modal */}
         <button 
           onClick={() => setMostrarModal(true)} 
-          className="bg-[#42a5f5] hover:bg-[#1e88e5] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg self-start sm:self-auto transition-all"
+          className="bg-[#42a5f5] hover:bg-[#1e88e5] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg transition-all"
         >
           + Registrar Empleado
         </button>
       </div>
 
+      {/* Tabla de Personal */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xs overflow-hidden p-6 md:p-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-semibold text-gray-500">
@@ -186,92 +195,138 @@ const Personal = ({ user, API_BASE_URL }) => {
         </div>
       </div>
 
-      {/* 🌟 MODAL FLOTANTE INTERACTIVO PARA REGISTRAR EMPLEADOS */}
+      {/* 🌟 INTERFAZ PROFESIONAL: MODAL DE NUEVO PERSONAL */}
       {mostrarModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-[#1b4332] uppercase tracking-tight">Nuevo Personal</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Encabezado del Modal */}
+            <div className="bg-[#1b4332] p-6 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Alta de Nuevo Personal</h3>
+                <p className="text-emerald-200/80 text-[11px] font-bold mt-0.5">Asigna credenciales seguras y roles al equipo.</p>
+              </div>
               <button 
                 onClick={() => setMostrarModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+                className="text-emerald-100 hover:text-white font-black text-xl bg-black/10 w-8 h-8 rounded-full flex items-center justify-center transition-all"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleRegistrarEmpleado} className="space-y-4">
+            {/* Formulario */}
+            <form onSubmit={handleRegistrarEmpleado} className="p-8 space-y-6">
+              
+              {/* Sección 1: Datos de Identificación (Dos columnas) */}
               <div>
-                <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Nombre Completo</label>
-                <input 
-                  type="text"
-                  name="nombre"
-                  autocomplete="off" // 👈 Agrega esta línea exacta para eliminar la sugerencia de flores
-                  value={nuevoUsuario.nombre}
-                  
-                  onChange={handleInputChange}
-                  placeholder="Ej. Jhojan Alarcón"
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800"
-                  required
-                />
+                <span className="text-[#1b4332] font-black text-[11px] uppercase tracking-wider block mb-3 border-b border-gray-100 pb-1">📋 Datos de Identificación</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Nombre Completo</label>
+                    <input 
+                      type="text"
+                      name="nombre"
+                      autoComplete="off"
+                      value={nuevoUsuario.nombre}
+                      onChange={handleInputChange}
+                      placeholder="Ej. Juan Pérez"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800 transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Correo Electrónico</label>
+                    <input 
+                      type="email"
+                      name="email"
+                      autoComplete="off"
+                      value={nuevoUsuario.email}
+                      onChange={handleInputChange}
+                      placeholder="juan@floristeria.com"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Sección 2: Seguridad y Permisos (Dos columnas) */}
               <div>
-                <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Correo Electrónico</label>
-                <input 
-                  type="email"
-                  name="email"
-                  autocomplete="off" // 👈 Agrega esta línea exacta para eliminar la sugerencia de flores
-                  value={nuevoUsuario.email}
-                  onChange={handleInputChange}
-                  placeholder="ejemplo@floristeria.com"
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800"
-                  required
-                />
+                <span className="text-[#1b4332] font-black text-[11px] uppercase tracking-wider block mb-3 border-b border-gray-100 pb-1">🔐 Seguridad y Permisos</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Contraseña</label>
+                    <input 
+                      type="password"
+                      name="password"
+                      value={nuevoUsuario.password}
+                      onChange={handleInputChange}
+                      placeholder="Mínimo 6 caracteres"
+                      className={`w-full bg-gray-50 border rounded-xl p-3 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Confirmar Contraseña</label>
+                    <input 
+                      type="password"
+                      name="confirmPassword"
+                      value={nuevoUsuario.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Repite la contraseña"
+                      className={`w-full bg-gray-50 border rounded-xl p-3 text-sm font-semibold outline-none transition-all ${mostrarErrorContrasena ? 'border-red-400 focus:border-red-500' : nuevoUsuario.confirmPassword && contrasenasCoinciden ? 'border-emerald-400 focus:border-emerald-500' : 'border-gray-200 focus:border-[#42a5f5]'}`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Mensaje de Error en Tiempo Real */}
+                {mostrarErrorContrasena && (
+                  <p className="text-red-500 font-bold text-xs mt-2 animate-pulse">
+                    ❌ Las contraseñas no coinciden. Inténtalo de nuevo.
+                  </p>
+                )}
+                {nuevoUsuario.confirmPassword && contrasenasCoinciden && (
+                  <p className="text-emerald-600 font-bold text-xs mt-2">
+                    ✅ ¡Perfecto! Las contraseñas coinciden.
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Contraseña de Acceso</label>
-                <input 
-                  type="password"
-                  name="password"
-                  value={nuevoUsuario.password}
-                  onChange={handleInputChange}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800"
-                  required
-                />
+              {/* Sección 3: Rol del sistema */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Asignar Rol Corporativo</label>
+                  <select 
+                    name="rol"
+                    value={nuevoUsuario.rol}
+                    onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-black uppercase text-gray-700 outline-none focus:border-[#42a5f5]"
+                  >
+                    <option value="empleado">⚙️ Empleado Común</option>
+                    <option value="admin">👑 Administrador Total</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-gray-400 font-black text-[10px] uppercase tracking-wider mb-1">Asignar Cargo / Rol</label>
-                <select 
-                  name="rol"
-                  value={nuevoUsuario.rol}
-                  onChange={handleInputChange}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black uppercase text-gray-700 outline-none focus:border-[#42a5f5]"
-                >
-                  <option value="empleado">⚙️ Empleado</option>
-                  <option value="admin">👑 Administrador</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-50 mt-6">
+              {/* Botones de Acción */}
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 mt-8">
                 <button
                   type="button"
                   onClick={() => setMostrarModal(false)}
-                  className="px-5 py-3 text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-wider"
+                  className="px-5 py-3 text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-wider transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={guardando}
-                  className="bg-[#1b4332] hover:bg-[#153426] text-white font-black text-xs uppercase tracking-widest p-3 px-6 rounded-xl shadow-md disabled:opacity-50 transition-all"
+                  disabled={guardando || (nuevoUsuario.confirmPassword.length > 0 && !contrasenasCoinciden)}
+                  className="bg-[#1b4332] hover:bg-[#153426] text-white font-black text-xs uppercase tracking-widest p-3.5 px-8 rounded-xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
-                  {guardando ? "Guardando..." : "Guardar Registro"}
+                  {guardando ? "Registrando..." : "Guardar Registro"}
                 </button>
               </div>
+
             </form>
           </div>
         </div>

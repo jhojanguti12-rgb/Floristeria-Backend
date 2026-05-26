@@ -206,7 +206,9 @@ const Personal = ({ user, API_BASE_URL }) => {
                 <input 
                   type="text"
                   name="nombre"
+                  autocomplete="off" // 👈 Agrega esta línea exacta para eliminar la sugerencia de flores
                   value={nuevoUsuario.nombre}
+                  
                   onChange={handleInputChange}
                   placeholder="Ej. Jhojan Alarcón"
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#42a5f5] text-gray-800"
@@ -219,6 +221,7 @@ const Personal = ({ user, API_BASE_URL }) => {
                 <input 
                   type="email"
                   name="email"
+                  autocomplete="off" // 👈 Agrega esta línea exacta para eliminar la sugerencia de flores
                   value={nuevoUsuario.email}
                   onChange={handleInputChange}
                   placeholder="ejemplo@floristeria.com"

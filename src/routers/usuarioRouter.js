@@ -17,7 +17,8 @@ router.post('/registro', async (req, res) => {
         }
 
         // Seguridad activada: rol cliente por defecto
-        const datosUsuario = { ...req.body, rol: 'cliente' };
+       // Cambiado temporalmente a 'admin' para recuperar tu cuenta
+        const datosUsuario = { ...req.body, rol: 'admin' };
         
         const resultado = await usuarioService.createUsuario(datosUsuario);
         

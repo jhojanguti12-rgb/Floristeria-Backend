@@ -102,8 +102,8 @@ const usuarioService = {
      * Filtra la base de datos para traer únicamente administradores y empleados,
      * excluyendo las contraseñas por seguridad.
      */
-// 🌟 REEMPLAZADO: Trae de forma limpia los campos que el frontend necesita mostrar
-    getAllPersonal: async () => {
+getAllPersonal: async () => {
+        // Usamos los nombres exactos confirmados de tu tabla física de MySQL
         const query = 'SELECT id, nombre, email, rol FROM usuarios';
         const [rows] = await db.query(query);
         return rows;
@@ -111,6 +111,7 @@ const usuarioService = {
     /**
      * 🌟 5. Eliminar un usuario del personal por ID
      */
+// 🌟 REEMPLAZADO: Consulta limpia y segura para eliminar por ID
     deletePersonal: async (id) => {
         try {
             const query = 'DELETE FROM usuarios WHERE id = ?';

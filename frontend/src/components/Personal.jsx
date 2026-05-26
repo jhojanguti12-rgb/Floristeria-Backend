@@ -303,8 +303,8 @@ const Personal = ({ user, API_BASE_URL }) => {
                     onChange={handleInputChange}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-black uppercase text-gray-700 outline-none focus:border-[#42a5f5]"
                   >
-                    <option value="empleado">⚙️ Empleado Común</option>
-                    <option value="admin">👑 Administrador Total</option>
+                    <option value="empleado">⚙️ Empleado.</option>
+                    <option value="admin">👑 Administrador.</option>
                   </select>
                 </div>
               </div>

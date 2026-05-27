@@ -111,7 +111,7 @@ const Categorias = ({ user, API_BASE_URL }) => {
           <h3 className="text-lg font-black text-[#1b4332] uppercase tracking-tight mb-4">Nueva Colección</h3>
           <form onSubmit={handleCrearCategoria} className="space-y-4 text-xs font-bold text-gray-500">
             <div>
-              <label className="block mb-1 uppercase tracking-wider">Nombre de la Categoría *</label>
+              <label className="block mb-1 uppercase tracking-wider">Nombre de la Categoría: *</label>
               <input 
                 type="text" 
                 placeholder="Ej. Ramos Buchones o Condolencias" 

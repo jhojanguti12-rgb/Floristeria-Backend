@@ -12,7 +12,7 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// 2. Crear categoría (POST /api/categorias) - MODO DIAGNÓSTICO DE MYSQL
+// 2. Crear categoría (POST /api/categorias) - INTEGRADO
 router.post('/', async (req, res, next) => {
     try {
         const nombre = req.body && req.body.nombre ? req.body.nombre.toString().trim() : '';
@@ -22,22 +22,24 @@ router.post('/', async (req, res, next) => {
             return res.status(400).json({ error: "El nombre es requerido" });
         }
 
-        const resultado = await categoriaService.createCategoria({ nombre, descripcion });
+        // Ejecutamos el servicio (que ahora solo guarda el nombre en MySQL)
+        const resultado = await categoriaService.createCategoria({ nombre });
+        
         const nuevoId = resultado && resultado.insertId ? resultado.insertId : Math.floor(Math.random() * 1000);
 
+        // Devolvemos el objeto tal como lo espera el Frontend para pintarlo de inmediato
         return res.status(201).json({ 
             id: nuevoId, 
             nombre: nombre, 
-            descripcion: descripcion 
+            descripcion: descripcion // Le devolvemos la descripción vacía o de texto para la vista
         });
 
     } catch (error) {
-        console.error("💥 Error capturado en el Router POST:", error.message);
-        
-        // 🌟 CAMBIO CLAVE: Devolvemos el "error.message" real de MySQL a la alerta de la pantalla
+        console.error("💥 Error en el Router POST:", error.message);
         return res.status(500).json({ error: error.message });
     }
 });
+
 // 3. Eliminar categoría (DELETE /api/categorias/:id)
 router.delete('/:id', async (req, res, next) => {
     try {

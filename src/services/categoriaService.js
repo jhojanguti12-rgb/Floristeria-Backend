@@ -11,20 +11,19 @@ const categoriaService = {
         }
     },
 
-    // 2. Crear categoría blindada ante campos nulos
+    // 2. CREAR CATEGORÍA CORREGIDO: Solo insertamos el 'nombre' ya que 'descripcion' no existe en tu tabla
     createCategoria: async (data) => {
         try {
-            // Aseguramos que las propiedades existan antes de enviarlas al query
             const nombre = data.nombre || 'Nueva Colección';
-            const descripcion = data.descripcion || ''; 
 
+            // 🌟 QUITAMOS 'descripcion' DE LA CONSULTA SQL PARA EVITAR EL ERROR
             const [result] = await db.query(
-                'INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)', 
-                [nombre, descripcion]
+                'INSERT INTO categorias (nombre) VALUES (?)', 
+                [nombre]
             );
             return result;
         } catch (error) {
-            console.error("❌ Error directo en la consulta SQL de inserción:", error.message);
+            console.error("❌ Error en la consulta SQL:", error.message);
             throw error;
         }
     },

@@ -25,10 +25,10 @@ export default function App() {
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 🌟 ESTADOS NUEVOS PARA PERSONAL Y CATEGORÍAS REALES DE BD
+  // 🌟 ESTADOS PARA PERSONAL Y CATEGORÍAS REALES DE BD
   const [empleados, setEmpleados] = useState([]);
   const [showModalEmpleado, setShowModalEmpleado] = useState(false);
-  const [categoriasBD, setCategoriasBD] = useState([]); // Guardará la lista directa de MySQL
+  const [categoriasBD, setCategoriasBD] = useState([]); 
 
   const [stats, setStats] = useState({ 
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
@@ -39,7 +39,7 @@ export default function App() {
   const [showModalEditar, setShowModalEditar] = useState(false);
   const [productoEditando, setProductoEditando] = useState(null);
 
-  // 🌟 MEJORA EXTRAORDINARIA: Cargar categorías directamente desde la Base de Datos
+  // 🌟 Cargar categorías directamente desde la Base de Datos
   const fetchCategoriasBD = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/categorias`);
@@ -72,10 +72,12 @@ export default function App() {
     }
   }, [user]);
 
+  // 🌟 REFRESH AUTOMÁTICO DE CONTADORES Y TABLA DE PEDIDOS (DASHBOARD)
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
-      const resStats = await fetch(`${API_BASE_URL}/stats`, {
+      // Agregamos un timestamp para forzar a Render a darnos datos frescos sin caché de navegador
+      const resStats = await fetch(`${API_BASE_URL}/stats?t=${new Date().getTime()}`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
       if (resStats.ok) {
@@ -106,7 +108,7 @@ export default function App() {
     if (user) {
       fetchData();
       fetchEmpleados();
-      fetchCategoriasBD(); // Sincroniza las pestañas con MySQL de Render
+      fetchCategoriasBD(); 
     }
   }, [user, fetchData, fetchEmpleados, fetchCategoriasBD]);
 
@@ -133,8 +135,13 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      loading(false);
+      setLoading(false);
     }
+  };
+
+  const handlebgAgregarProducto = async (e) => {
+    // Alias para compatibilidad de funciones
+    handleAgregarProducto(e);
   };
 
   const handleAgregarProducto = async (e) => {
@@ -169,7 +176,7 @@ export default function App() {
       if (res.ok) {
         setImagenArchivo(null); 
         fetchData();
-        fetchCategoriasBD(); // Sincroniza por si se creó una categoría sobre la marcha
+        fetchCategoriasBD(); 
         setShowModal(false);
       } else {
         const errData = await res.json();
@@ -254,10 +261,7 @@ export default function App() {
         setShowModalEditar(false);
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente en la base de datos!');
-        
-        if (typeof fetchData === 'function') {
-          fetchData();
-        }
+        fetchData();
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
@@ -344,7 +348,7 @@ export default function App() {
     return alertas;
   };
 
-  // FILTRADO INTELIGENTE ASOCIADO A LAS CATEGORÍAS REALES
+  // FILTRADO INTELIGENTE
   const productosFiltrados = productos.filter(p => {
     const pCat = p.nombre_categoria || p.categoria || p.category || '';
     const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim().toLowerCase() === filtroCategoria.toLowerCase();
@@ -352,6 +356,7 @@ export default function App() {
     return cumpleCategoria && cumpleBusqueda;
   });
 
+  // --- RENDERIZADO CONDICIONAL DE LOGIN ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -372,6 +377,7 @@ export default function App() {
     );
   }
 
+  // --- RENDERIZADO PANEL DE CONTROL ---
   return (
     <div className="min-h-screen bg-[#eef3f7] flex flex-col md:flex-row font-sans relative overflow-x-hidden">
       
@@ -384,6 +390,7 @@ export default function App() {
         @media (min-width: 768px) {
           .menu-lateral-adaptable { position: static !important; transform: none !important; height: auto !important; }
           .boton-hamburguesa { display: none !important; }
+          .contenido-principal { padding-top: 0 !important; }
         }
       `}</style>
       
@@ -400,7 +407,7 @@ export default function App() {
         </div>
         
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          <div onClick={() => { setActiveTab('inicio'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inicio' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+          <div onClick={() => { setActiveTab('inicio'); setMenuOpen(false); fetchData(); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inicio' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🏠</span> <span>Inicio</span>
           </div>
           <div onClick={() => { setActiveTab('inventario'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inventario' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
@@ -480,7 +487,8 @@ export default function App() {
                     <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-2">
                       <div>
                         <p className="text-[9px] font-black text-gray-300 uppercase">#{String(p.id || p._id).substring(0,5)}</p>
-                        <p className="text-sm font-black text-gray-700">{p.cliente}</p>
+                        {/* 🌟 CORREGIDO: Muestra 'nombre' o 'cliente' dinámico del backend sin congelarse */}
+                        <p className="text-sm font-black text-gray-700">{p.nombre || p.cliente}</p>
                       </div>
                       <p className="text-sm font-black text-emerald-600">{formatCOP(p.total)}</p>
                     </div>
@@ -497,7 +505,6 @@ export default function App() {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
-                {/* 🌟 PESTAÑAS INTEGRADAS CON MYSQL DE FORMA REAL */}
                 <div className="flex flex-wrap gap-2 mt-3">
                   <button 
                     onClick={() => setFiltroCategoria('Todas')}
@@ -506,7 +513,6 @@ export default function App() {
                     Todas las Flores
                   </button>
                   
-                  {/* Aquí mapeamos las categorías reales traídas desde el backend */}
                   {categoriasBD.map((cat) => (
                     <button 
                       key={cat.id} 
@@ -571,7 +577,7 @@ export default function App() {
                           <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">{prod.stock} und</span></p>
                         </div>
                         
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 mt-4">
                           <button 
                             onClick={() => {
                               setProductoEditando(prod);
@@ -622,9 +628,10 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} />}
-        {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} />}
-        {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} />}
+        {/* 🌟 SECCIÓN COMPONENTES: Inyección de la función re-fetch para limpiar la vista */}
+        {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} onPersonalCambiado={fetchData} />}
+        {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} onPedidoCreado={fetchData} />}
+        {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} onCategoriasCambiadas={fetchCategoriasBD} />}
 
       </main>
 
@@ -652,7 +659,6 @@ export default function App() {
                   placeholder="Selecciona o escribe una colección..." 
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
-                {/* 🌟 DATALIST CONECTADO CON TUS CATEGORÍAS REALES DE MYSQL */}
                 <datalist id="categorias-sugeridas-bd">
                   {categoriasBD.map((cat) => (
                     <option key={cat.id} value={cat.nombre} />

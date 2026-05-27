@@ -12,19 +12,33 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// 2. Añadir una categoría (POST /api/categorias)
+
+// 2. Añadir una categoría (POST /api/categorias) - VERSIÓN BLINDADA ANTI-ERRORS 500
 router.post('/', async (req, res, next) => {
     try {
+        // Sacamos los datos explícitamente del cuerpo de la petición
         const { nombre, descripcion } = req.body;
-        const resultado = await categoriaService.createCategoria(req.body);
+
+        // Validación preventiva antes de tocar la Base de Datos
+        if (!nombre || nombre.trim() === "") {
+            return res.status(400).json({ error: "El nombre de la colección es totalmente obligatorio." });
+        }
+
+        // Le pasamos las variables limpias en un objeto estructurado al servicio
+        const resultado = await categoriaService.createCategoria({ 
+            nombre: nombre.trim(), 
+            descripcion: descripcion ? descripcion.trim() : null 
+        });
         
-        // Devolvemos el formato exacto de objeto que el Frontend de React espera meter en su tabla
+        // Devolvemos la respuesta exacta con el ID recién insertado en MySQL
         res.status(201).json({ 
             id: resultado.insertId || resultado.id, 
-            nombre, 
-            descripcion 
+            nombre: nombre.trim(), 
+            descripcion: descripcion ? descripcion.trim() : "" 
         });
     } catch (error) {
+        // Si hay un error de SQL o código, el middleware errorHandler lo captura sin tumbar el server
+        console.error("❌ Error interno en POST /categorias:", error.message);
         next(error);
     }
 });

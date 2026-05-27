@@ -31,18 +31,18 @@ const pedidoService = {
         }
     },
 
-    // 2. CREAR PEDIDO Y DESCONTAR STOCK (Unificado para Web y Panel de Administración)
+// 2. CREAR PEDIDO Y DESCONTAR STOCK (Corregido para evitar fallos de id_cliente NULL)
     createPedido: async (data) => {
-        // Adaptamos para recibir 'productos' (Web) o 'flores' (Modal de Admin)
         const listaProductos = data.productos || data.flores;
         
-        // Identificamos los campos que vienen del Admin Modal o del flujo Web
         const clienteNombre = data.cliente || 'Comprador Físico';
         const telefono = data.telefono_contacto || '';
         const direccion = data.direccion_entrega || 'Recoge en Tienda';
         const dedicatoriaTexto = data.dedicatoria || '';
         
-        const id_cliente = data.id_cliente || null; 
+        // 🔥 CORRECCIÓN AQUÍ: Si id_cliente es null o vacío, le asignamos el ID 1 (Cliente General / Mostrador)
+        // Asegúrate de tener al menos un usuario/cliente creado en tu base de datos con ID 1
+        const id_cliente = data.id_cliente || 1; 
         const id_empleado = data.id_empleado || null; 
         const total = data.total || 0;
 
@@ -55,8 +55,6 @@ const pedidoService = {
         try {
             await connection.beginTransaction(); 
 
-            // 🌟 Consulta de inserción adaptada a tus columnas reales
-            // Nota: Agregamos las columnas logísticas que lee tu panel de administración
             const queryPedido = `
                 INSERT INTO pedidos 
                 (id_cliente, id_empleado, total, estado, direccion_entrega, telefono_contacto, dedicatoria, fecha_pedido) 
@@ -74,12 +72,9 @@ const pedidoService = {
             
             const nuevoPedidoId = resultPedido.insertId;
 
-            // Recorremos los productos para validar stock e insertar en detalle_pedido
             for (const p of listaProductos) {
-                // Mapeo flexible: soporta 'id_flor' (Admin) o 'id_flor'/'id' (Web)
                 const idFlor = p.id_flor || p.id;
                 const cantidad = p.cantidad;
-                // Mapeo flexible para el precio unitario
                 const precioUnitario = p.precio_unitario || p.precio;
 
                 const [rows] = await connection.query('SELECT stock, nombre FROM flores WHERE id = ?', [idFlor]);
@@ -93,11 +88,9 @@ const pedidoService = {
                     throw new Error(`Stock insuficiente para: ${flor.nombre}. Disponible: ${flor.stock}, Solicitado: ${cantidad}`);
                 }
 
-                // 📌 Inserción en tu tabla original en singular: 'detalle_pedido'
                 const queryDetalle = 'INSERT INTO detalle_pedido (id_pedido, id_flor, cantidad, precio_unitario) VALUES (?, ?, ?, ?)';
                 await connection.query(queryDetalle, [nuevoPedidoId, idFlor, cantidad, precioUnitario]);
 
-                // 💥 Restamos las unidades del inventario real
                 const queryUpdateStock = 'UPDATE flores SET stock = stock - ? WHERE id = ?';
                 await connection.query(queryUpdateStock, [cantidad, idFlor]);
             }
@@ -116,7 +109,6 @@ const pedidoService = {
             connection.release(); 
         }
     },
-
     // =========================================================
     // 🌟 FUNCIONES EXCLUSIVAS PARA EL ADMIN PANEL (PEDIDOS)
     // =========================================================

@@ -149,15 +149,20 @@ const Pedidos = ({ user, API_BASE_URL }) => {
       return;
     }
 
-    const payload = {
+const payload = {
+      // Mantenemos los campos
       cliente: cliente.trim(),
       telefono_contacto: telefono.trim(),
-      direccion_entrega: direccion.trim() || 'Recoge en tienda física',
+      
+      // 🔥 TRUCO: Guardamos el Nombre del Cliente al principio de la dirección o dedicatoria
+      direccion_entrega: `Cliente: ${cliente.trim()} | Dir: ${direccion.trim() || 'Recoge en tienda'}`,
       dedicatoria: dedicatoria.trim(),
+      
       total: calcularTotalCompra(),
-      flores: floresValidas
+      flores: floresValidas,
+      id_cliente: adminIdReal, 
+      id_empleado: adminIdReal 
     };
-
     try {
 // ✅ CÁMBIALO PARA QUE QUEDE ASÍ:
 const res = await fetch(`${API_BASE_URL}/pedidos`, {

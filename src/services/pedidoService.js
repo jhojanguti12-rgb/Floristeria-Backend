@@ -113,30 +113,7 @@ const pedidoService = {
     // 🌟 FUNCIONES EXCLUSIVAS PARA EL ADMIN PANEL (PEDIDOS)
     // =========================================================
 
-    // 3. Obtener lista de pedidos completa mapeada para el panel de administración
-    getAdminPedidosLista: async () => {
-        try {
-            const query = `
-                SELECT 
-                    p.id, 
-                    p.total, 
-                    p.estado, 
-                    p.fecha_pedido AS fecha,
-                    p.direccion_entrega, 
-                    p.telefono_contacto, 
-                    p.dedicatoria,
-                    COALESCE(u.nombre, 'Comprador Físico / Web') AS cliente
-                FROM pedidos p
-                LEFT JOIN usuarios u ON p.id_cliente = u.id
-                ORDER BY p.id DESC`;
 
-            const [results] = await db.query(query);
-            return results;
-        } catch (error) {
-            console.error("❌ Error en getAdminPedidosLista:", error.message);
-            throw error;
-        }
-    },
 
     // 4. Obtener el desglose de arreglos florales de un pedido en base a su ID
     getAdminPedidoDetalle: async (id_pedido) => {

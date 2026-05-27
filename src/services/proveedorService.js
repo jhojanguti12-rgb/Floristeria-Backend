@@ -2,74 +2,62 @@ const db = require('../config/db');
 
 const proveedorService = {
     // 1. Obtener todos los proveedores
-    getAllProveedores: () => {
-        return new Promise((resolve, reject) => {
-            // Aseguramos 'proveedores' en minúscula exacta
-            const query = 'SELECT id, nombre, telefono, contacto_nombre FROM proveedores ORDER BY id DESC';
-            
-            db.query(query, (err, results) => {
-                if (err) {
-                    console.error("❌ Error interno MySQL en getAllProveedores:", err.message);
-                    return reject(err);
-                }
-                resolve(results);
-            });
-        });
+    getAllProveedores: async () => {
+        try {
+            // Con mysql2/promise se usa desestructuración [rows] para obtener los resultados
+            const [rows] = await db.query('SELECT id, nombre, telefono, contacto_nombre FROM proveedores ORDER BY id DESC');
+            return rows;
+        } catch (error) {
+            console.error("❌ Error en proveedorService.getAllProveedores:", error.message);
+            throw error; // Lanza el error para que lo ataje el catch del Router
+        }
     },
 
     // 2. Crear un nuevo proveedor
-    createProveedor: (data) => {
-        return new Promise((resolve, reject) => {
-            // Desestructuración segura protegiendo nulos o vacíos
+    createProveedor: async (data) => {
+        try {
             const nombre = data && data.nombre ? data.nombre.toString().trim() : '';
             const telefono = data && data.telefono ? data.telefono.toString().trim() : '';
             const contacto_nombre = data && data.contacto_nombre ? data.contacto_nombre.toString().trim() : '';
 
-            // Columnas exactas de tu Workbench en minúsculas
             const query = 'INSERT INTO proveedores (nombre, telefono, contacto_nombre) VALUES (?, ?, ?)';
+            const [result] = await db.query(query, [nombre, telefono, contacto_nombre]);
             
-            db.query(query, [nombre, telefono, contacto_nombre], (err, result) => {
-                if (err) {
-                    console.error("❌ Error interno MySQL en createProveedor:", err.message);
-                    return reject(err);
-                }
-                resolve(result);
-            });
-        });
+            return result;
+        } catch (error) {
+            console.error("❌ Error en proveedorService.createProveedor:", error.message);
+            throw error;
+        }
     },
 
     // 3. Actualizar un proveedor existente
-    actualizarProveedor: (id, data) => {
-        return new Promise((resolve, reject) => {
+    actualizarProveedor: async (id, data) => {
+        try {
             const nombre = data && data.nombre ? data.nombre.toString().trim() : '';
             const telefono = data && data.telefono ? data.telefono.toString().trim() : '';
             const contacto_nombre = data && data.contacto_nombre ? data.contacto_nombre.toString().trim() : '';
 
             const query = 'UPDATE proveedores SET nombre = ?, telefono = ?, contacto_nombre = ? WHERE id = ?';
+            const [result] = await db.query(query, [nombre, telefono, contacto_nombre, Number(id)]);
             
-            db.query(query, [nombre, telefono, contacto_nombre, Number(id)], (err, result) => {
-                if (err) {
-                    console.error("❌ Error interno MySQL en actualizarProveedor:", err.message);
-                    return reject(err);
-                }
-                resolve(result);
-            });
-        });
+            return result;
+        } catch (error) {
+            console.error("❌ Error en proveedorService.actualizarProveedor:", error.message);
+            throw error;
+        }
     },
 
     // 4. Eliminar un proveedor
-    eliminarProveedor: (id) => {
-        return new Promise((resolve, reject) => {
+    eliminarProveedor: async (id) => {
+        try {
             const query = 'DELETE FROM proveedores WHERE id = ?';
+            const [result] = await db.query(query, [Number(id)]);
             
-            db.query(query, [Number(id)], (err, result) => {
-                if (err) {
-                    console.error("❌ Error interno MySQL en eliminarProveedor:", err.message);
-                    return reject(err);
-                }
-                resolve(result);
-            });
-        });
+            return result;
+        } catch (error) {
+            console.error("❌ Error en proveedorService.eliminarProveedor:", error.message);
+            throw error;
+        }
     }
 };
 

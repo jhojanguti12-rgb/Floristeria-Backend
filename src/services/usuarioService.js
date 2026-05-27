@@ -98,20 +98,25 @@ const usuarioService = {
     }, 
 
     /**
-     * 🌟 4. Obtener todo el personal (Admin Panel)
+     * 🌟 4. Obtener todo el personal (Admin Panel) - ¡CORREGIDO!
      * Filtra la base de datos para traer únicamente administradores y empleados,
-     * excluyendo las contraseñas por seguridad.
+     * excluyendo explícitamente a los clientes para no contaminar el equipo de trabajo.
      */
-getAllPersonal: async () => {
-        // Usamos los nombres exactos confirmados de tu tabla física de MySQL
-        const query = 'SELECT id, nombre, email, rol FROM usuarios';
-        const [rows] = await db.query(query);
-        return rows;
+    getAllPersonal: async () => {
+        try {
+            // Agregamos el filtro WHERE para excluir cuentas con rol de cliente
+            const query = "SELECT id, nombre, email, rol FROM usuarios WHERE rol != 'cliente' ORDER BY id ASC";
+            const [rows] = await db.query(query);
+            return rows;
+        } catch (error) {
+            console.error("❌ Error en getAllPersonal:", error.message);
+            throw error;
+        }
     },
+
     /**
      * 🌟 5. Eliminar un usuario del personal por ID
      */
-// 🌟 REEMPLAZADO: Consulta limpia y segura para eliminar por ID
     deletePersonal: async (id) => {
         try {
             const query = 'DELETE FROM usuarios WHERE id = ?';

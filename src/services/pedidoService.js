@@ -1,17 +1,18 @@
 const db = require('../config/db');
 
 const pedidoService = {
-    // 1. Obtener todos los pedidos con nombres de clientes (Dashboard)
+// 1. Obtener todos los pedidos con nombres de clientes (Dashboard) - CORREGIDO
     getAllPedidos: async () => {
         try {
             const query = `
                 SELECT 
                     p.id, 
                     p.fecha_pedido as fecha, 
+                    p.direccion_entrega,
                     CASE 
                         WHEN p.id_cliente = 1 AND p.direccion_entrega LIKE 'Cliente: %' 
                             THEN SUBSTRING_INDEX(SUBSTRING_INDEX(p.direccion_entrega, ' | ', 1), 'Cliente: ', -1)
-                        WHEN p.id_cliente = 1 
+                        WHEN p.id_cliente = 1 AND (p.direccion_entrega NOT LIKE 'Cliente: %' OR p.direccion_entrega IS NULL)
                             THEN 'Comprador Físico'
                         ELSE COALESCE(u.nombre, 'Cliente Registrado')
                     END AS cliente, 
@@ -26,7 +27,7 @@ const pedidoService = {
                 id: String(pedido.id),
                 fecha: pedido.fecha,
                 cliente: pedido.cliente, 
-                nombre: pedido.cliente, 
+                nombre: pedido.cliente, // Esto garantiza que el componente del Dashboard lea 'nombre' correctamente
                 total: Number(pedido.total),
                 status: 'completado' 
             }));

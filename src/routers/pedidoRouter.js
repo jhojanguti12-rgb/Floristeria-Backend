@@ -75,3 +75,14 @@ router.put('/admin/cambiar-estado/:id', async (req, res, next) => {
 });
 
 module.exports = router;
+// 🔍 RUTA TEMPORAL PARA VER LOS USUARIOS REALES EN PANTALLA
+router.get('/ver-usuarios-bd', async (req, res) => {
+    try {
+        const db = require('../config/db');
+        // Cambia 'usuarios' por el nombre real de tu tabla si se llama 'clientes'
+        const [rows] = await db.query('SELECT id, nombre, email FROM usuarios LIMIT 5'); 
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});

@@ -14,16 +14,16 @@ export default function Proveedores({ user, API_BASE_URL }) {
     });
 
     // 🔑 OBTENER EL TOKEN AUTOMÁTICAMENTE
-    // Lo busca desde el objeto 'user' que le pasa App.jsx o directamente del localStorage
     const token = user?.token || localStorage.getItem('token');
 
     // Cargar proveedores desde la API (Con Token)
     const fetchProveedores = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}/api/proveedores`, {
+            // 🛠️ CORREGIDO: Se removió /api porque API_BASE_URL ya lo incluye
+            const res = await fetch(`${API_BASE_URL}/proveedores`, {
                 headers: {
-                    'Authorization': `Bearer ${token}` // Envia el token al backend
+                    'Authorization': `Bearer ${token}` 
                 }
             });
             const data = await res.json();
@@ -47,9 +47,10 @@ export default function Proveedores({ user, API_BASE_URL }) {
             return;
         }
 
+        // 🛠️ CORREGIDO: Se removió /api en ambas opciones de URL
         const url = editingId 
-            ? `${API_BASE_URL}/api/proveedores/${editingId}` 
-            : `${API_BASE_URL}/api/proveedores`;
+            ? `${API_BASE_URL}/proveedores/${editingId}` 
+            : `${API_BASE_URL}/proveedores`;
         
         const method = editingId ? 'PUT' : 'POST';
 
@@ -58,7 +59,7 @@ export default function Proveedores({ user, API_BASE_URL }) {
                 method,
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // Envia el token al backend
+                    'Authorization': `Bearer ${token}` 
                 },
                 body: JSON.stringify(form)
             });
@@ -79,10 +80,11 @@ export default function Proveedores({ user, API_BASE_URL }) {
     const handleDelete = async (id) => {
         if (window.confirm("¿Estás seguro de que deseas eliminar este proveedor?")) {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/proveedores/${id}`, {
+                // 🛠️ CORREGIDO: Se removió /api de la ruta de eliminación
+                const res = await fetch(`${API_BASE_URL}/proveedores/${id}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${token}` // Envia el token al backend
+                        'Authorization': `Bearer ${token}` 
                     }
                 });
                 if (res.ok) {

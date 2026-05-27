@@ -1,10 +1,9 @@
 const db = require('../config/db');
 
 const categoriaService = {
-    // 1. Obtener todas las categorías (Para el selector del formulario)
+    // 1. Obtener todas las categorías
     getAllCategorias: async () => {
         try {
-            // Al usar promise clients, usamos await y desestructuramos [rows]
             const [rows] = await db.query('SELECT * FROM categorias ORDER BY nombre ASC');
             return rows;
         } catch (error) {
@@ -12,21 +11,25 @@ const categoriaService = {
         }
     },
 
-    // 2. Para que el Admin añada categorías
+    // 2. Crear categoría blindada ante campos nulos
     createCategoria: async (data) => {
         try {
-            const { nombre, descripcion } = data;
+            // Aseguramos que las propiedades existan antes de enviarlas al query
+            const nombre = data.nombre || 'Nueva Colección';
+            const descripcion = data.descripcion || ''; 
+
             const [result] = await db.query(
                 'INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)', 
                 [nombre, descripcion]
             );
             return result;
         } catch (error) {
+            console.error("❌ Error directo en la consulta SQL de inserción:", error.message);
             throw error;
         }
     },
 
-    // 3. LA UNIÓN: Buscar flores de una categoría específica
+    // 3. Buscar flores de una categoría
     getFloresByCategoria: async (idCategoria) => {
         try {
             const [rows] = await db.query(
@@ -39,10 +42,9 @@ const categoriaService = {
         }
     },
 
-    // 4. Actualizar una categoría (Nombre o descripción)
+    // 4. Actualizar una categoría
     updateCategoria: async (id, data) => {
         try {
-            // Usamos SET ? para que mysql2 maneje el objeto de datos automáticamente
             const [result] = await db.query('UPDATE categorias SET ? WHERE id = ?', [data, id]);
             return result;
         } catch (error) {

@@ -13,36 +13,37 @@ router.get('/', async (req, res, next) => {
 });
 
 
-// 2. Añadir una categoría (POST /api/categorias) - VERSIÓN BLINDADA ANTI-ERRORS 500
+// 2. Ruta para añadir una categoría (POST /api/categorias) - EDICIÓN CORREGIDA
 router.post('/', async (req, res, next) => {
     try {
-        // Sacamos los datos explícitamente del cuerpo de la petición
-        const { nombre, descripcion } = req.body;
+        // 1. Extraemos los campos directamente asegurándonos de que existan
+        const nombre = req.body && req.body.nombre ? req.body.nombre.toString().trim() : '';
+        const descripcion = req.body && req.body.descripcion ? req.body.descripcion.toString().trim() : '';
 
-        // Validación preventiva antes de tocar la Base de Datos
-        if (!nombre || nombre.trim() === "") {
-            return res.status(400).json({ error: "El nombre de la colección es totalmente obligatorio." });
+        // 2. Validación estricta en el Backend antes de enviar a MySQL
+        if (!nombre) {
+            return res.status(400).json({ error: "El nombre de la categoría es obligatorio." });
         }
 
-        // Le pasamos las variables limpias en un objeto estructurado al servicio
-        const resultado = await categoriaService.createCategoria({ 
-            nombre: nombre.trim(), 
-            descripcion: descripcion ? descripcion.trim() : null 
-        });
+        // 3. Enviamos los datos limpios al servicio
+        const resultado = await categoriaService.createCategoria({ nombre, descripcion });
         
-        // Devolvemos la respuesta exacta con el ID recién insertado en MySQL
-        res.status(201).json({ 
-            id: resultado.insertId || resultado.id, 
-            nombre: nombre.trim(), 
-            descripcion: descripcion ? descripcion.trim() : "" 
+        // 4. Extraemos el ID generado en la base de datos (mysql2 lo guarda en insertId)
+        const nuevoId = resultado && resultado.insertId ? resultado.insertId : Date.now();
+
+        // 5. Devolvemos la respuesta exacta construyendo el objeto estructurado que React necesita
+        return res.status(201).json({ 
+            id: nuevoId, 
+            nombre: nombre, 
+            descripcion: descripcion || "" 
         });
+
     } catch (error) {
-        // Si hay un error de SQL o código, el middleware errorHandler lo captura sin tumbar el server
-        console.error("❌ Error interno en POST /categorias:", error.message);
+        console.error("❌ Error real en POST /api/categorias:", error);
+        // Pasamos el error al manejador global para evitar que se caiga el servidor
         next(error);
     }
 });
-
 // 3. 🌟 ELIMINAR CATEGORÍA CORREGIDO: (DELETE /api/categorias/:id)
 router.delete('/:id', async (req, res, next) => {
     try {

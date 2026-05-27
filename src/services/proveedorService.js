@@ -4,14 +4,15 @@ const proveedorService = {
     // 1. Obtener todos los proveedores
     getAllProveedores: () => {
         return new Promise((resolve, reject) => {
-            const query = 'SELECT * FROM proveedores ORDER BY id DESC';
+            // Aseguramos 'proveedores' en minúscula exacta
+            const query = 'SELECT id, nombre, telefono, contacto_nombre FROM proveedores ORDER BY id DESC';
+            
             db.query(query, (err, results) => {
                 if (err) {
-                    console.error("❌ Error en getAllProveedores:", err);
-                    reject(err);
-                } else {
-                    resolve(results);
+                    console.error("❌ Error interno MySQL en getAllProveedores:", err.message);
+                    return reject(err);
                 }
+                resolve(results);
             });
         });
     },
@@ -19,19 +20,20 @@ const proveedorService = {
     // 2. Crear un nuevo proveedor
     createProveedor: (data) => {
         return new Promise((resolve, reject) => {
-            // Desestructuramos las variables asegurando que coincidan con el Form de React
-            const { nombre, telefono, contacto_nombre } = data;
-            
+            // Desestructuración segura protegiendo nulos o vacíos
+            const nombre = data && data.nombre ? data.nombre.toString().trim() : '';
+            const telefono = data && data.telefono ? data.telefono.toString().trim() : '';
+            const contacto_nombre = data && data.contacto_nombre ? data.contacto_nombre.toString().trim() : '';
+
+            // Columnas exactas de tu Workbench en minúsculas
             const query = 'INSERT INTO proveedores (nombre, telefono, contacto_nombre) VALUES (?, ?, ?)';
             
-            // 💡 Agregamos "|| ''" por si el asesor viene vacío, así MySQL no se rompe si no acepta NULL
-            db.query(query, [nombre, telefono, contacto_nombre || ''], (err, result) => {
+            db.query(query, [nombre, telefono, contacto_nombre], (err, result) => {
                 if (err) {
-                    console.error("❌ Error al insertar en la tabla proveedores:", err);
-                    reject(err);
-                } else {
-                    resolve(result);
+                    console.error("❌ Error interno MySQL en createProveedor:", err.message);
+                    return reject(err);
                 }
+                resolve(result);
             });
         });
     },
@@ -39,16 +41,18 @@ const proveedorService = {
     // 3. Actualizar un proveedor existente
     actualizarProveedor: (id, data) => {
         return new Promise((resolve, reject) => {
-            const { nombre, telefono, contacto_nombre } = data;
+            const nombre = data && data.nombre ? data.nombre.toString().trim() : '';
+            const telefono = data && data.telefono ? data.telefono.toString().trim() : '';
+            const contacto_nombre = data && data.contacto_nombre ? data.contacto_nombre.toString().trim() : '';
+
             const query = 'UPDATE proveedores SET nombre = ?, telefono = ?, contacto_nombre = ? WHERE id = ?';
             
-            db.query(query, [nombre, telefono, contacto_nombre || '', id], (err, result) => {
+            db.query(query, [nombre, telefono, contacto_nombre, Number(id)], (err, result) => {
                 if (err) {
-                    console.error("❌ Error en actualizarProveedor:", err);
-                    reject(err);
-                } else {
-                    resolve(result);
+                    console.error("❌ Error interno MySQL en actualizarProveedor:", err.message);
+                    return reject(err);
                 }
+                resolve(result);
             });
         });
     },
@@ -57,13 +61,13 @@ const proveedorService = {
     eliminarProveedor: (id) => {
         return new Promise((resolve, reject) => {
             const query = 'DELETE FROM proveedores WHERE id = ?';
-            db.query(query, [id], (err, result) => {
+            
+            db.query(query, [Number(id)], (err, result) => {
                 if (err) {
-                    console.error("❌ Error en eliminarProveedor:", err);
-                    reject(err);
-                } else {
-                    resolve(result);
+                    console.error("❌ Error interno MySQL en eliminarProveedor:", err.message);
+                    return reject(err);
                 }
+                resolve(result);
             });
         });
     }

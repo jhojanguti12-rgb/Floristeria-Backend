@@ -2,48 +2,29 @@ const express = require('express');
 const router = express.Router();
 const proveedorService = require('../services/proveedorService');
 
-// 1. Listar todos los proveedores (GET /api/proveedores)
-router.get('/', async (req, res, next) => {
+// Busca el GET '/' y déjalo así:
+router.get('/', async (req, res) => {
     try {
         const proveedores = await proveedorService.getAllProveedores();
         res.json(proveedores);
     } catch (error) {
-        console.error("💥 Error en el Router GET Proveedores:", error.message);
-        return res.status(500).json({ error: error.message });
+        console.error("💥 Error en GET proveedores:", error);
+        // 🚨 ENVIAMOS EL MENSAJE REAL DE MYSQL AL FRONTEND
+        res.status(500).json({ error: error.message || "Error interno" });
     }
 });
 
-// 2. Registrar un nuevo proveedor (POST /api/proveedores)
-router.post('/', async (req, res, next) => {
+// Busca el POST '/' y déjalo así:
+router.post('/', async (req, res) => {
     try {
-        const nombre = req.body && req.body.nombre ? req.body.nombre.toString().trim() : '';
-        const telefono = req.body && req.body.telefono ? req.body.telefono.toString().trim() : '';
-        const contacto_nombre = req.body && req.body.contacto_nombre ? req.body.contacto_nombre.toString().trim() : '';
-
-        if (!nombre || !telefono) {
-            return res.status(400).json({ error: "El nombre y el teléfono son requeridos" });
-        }
-
-        // Ejecutamos el servicio para guardar en MySQL
-        const resultado = await proveedorService.createProveedor({ nombre, telefono, contacto_nombre });
-        
-        const nuevoId = resultado && resultado.insertId ? resultado.insertId : Math.floor(Math.random() * 1000);
-
-        // Devolvemos el objeto tal como lo espera tu Frontend para pintarlo en la tabla
-        return res.status(201).json({ 
-            id: nuevoId, 
-            nombre, 
-            telefono, 
-            contacto_nombre 
-        });
-
+        const nuevo = await proveedorService.createProveedor(req.body);
+        res.status(201).json(nuevo);
     } catch (error) {
-        console.error("💥 Error en el Router POST Proveedores:", error.message);
-        // Esto le enviará el mensaje real del error (por ejemplo, si falta una columna o la tabla está mal)
-        return res.status(500).json({ error: error.message });
+        console.error("💥 Error en POST proveedores:", error);
+        // 🚨 ENVIAMOS EL MENSAJE REAL DE MYSQL AL FRONTEND
+        res.status(500).json({ error: error.message || "Error interno" });
     }
 });
-
 // 3. Editar un proveedor existente (PUT /api/proveedores/:id)
 router.put('/:id', async (req, res, next) => {
     try {

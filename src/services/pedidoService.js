@@ -8,10 +8,16 @@ const pedidoService = {
                 SELECT 
                     p.id, 
                     p.fecha_pedido as fecha, 
-                    COALESCE(c.nombre, 'Cliente Registrado') AS cliente, 
+                    CASE 
+                        WHEN p.id_cliente = 1 AND p.direccion_entrega LIKE 'Cliente: %' 
+                            THEN SUBSTRING_INDEX(SUBSTRING_INDEX(p.direccion_entrega, ' | ', 1), 'Cliente: ', -1)
+                        WHEN p.id_cliente = 1 
+                            THEN 'Comprador Físico'
+                        ELSE COALESCE(u.nombre, 'Cliente Registrado')
+                    END AS cliente, 
                     p.total 
                 FROM pedidos p 
-                LEFT JOIN clientes c ON p.id_cliente = c.id
+                LEFT JOIN usuarios u ON p.id_cliente = u.id
                 ORDER BY p.id DESC LIMIT 10`;
             
             const [results] = await db.query(query); 
@@ -31,17 +37,16 @@ const pedidoService = {
         }
     },
 
-// 2. CREAR PEDIDO Y DESCONTAR STOCK (Unificado para Web y Panel de Administración)
+    // 2. CREAR PEDIDO Y DESCONTAR STOCK (Unificado para Web y Panel de Administración)
     createPedido: async (data) => {
         // Adaptamos para recibir 'productos' (Web) o 'flores' (Modal de Admin)
         const listaProductos = data.productos || data.flores;
         
-        const clienteNombre = data.cliente || 'Comprador Físico';
         const telefono = data.telefono_contacto || '';
         const direccion = data.direccion_entrega || 'Recoge en Tienda';
         const dedicatoriaTexto = data.dedicatoria || '';
         
-        // 🔥 AQUÍ ESTÁ EL TRUCO REAL: Forzamos el ID 1 que acabamos de verificar en tu MySQL Workbench
+        // Forzamos el ID 1 verificado en MySQL Workbench
         const id_cliente = data.id_cliente || 1; 
         const id_empleado = data.id_empleado || null; 
         const total = data.total || 0;
@@ -109,11 +114,41 @@ const pedidoService = {
             connection.release(); 
         }
     },
+
     // =========================================================
     // 🌟 FUNCIONES EXCLUSIVAS PARA EL ADMIN PANEL (PEDIDOS)
     // =========================================================
 
+    // 3. Obtener lista de pedidos completa mapeada para el panel de administración (¡RESTABLECIDA!)
+    getAdminPedidosLista: async () => {
+        try {
+            const query = `
+                SELECT 
+                    p.id, 
+                    p.total, 
+                    p.estado, 
+                    p.fecha_pedido AS fecha,
+                    p.direccion_entrega, 
+                    p.telefono_contacto, 
+                    p.dedicatoria,
+                    CASE 
+                        WHEN p.id_cliente = 1 AND p.direccion_entrega LIKE 'Cliente: %' 
+                            THEN SUBSTRING_INDEX(SUBSTRING_INDEX(p.direccion_entrega, ' | ', 1), 'Cliente: ', -1)
+                        WHEN p.id_cliente = 1 
+                            THEN 'Comprador Físico'
+                        ELSE COALESCE(u.nombre, 'Comprador Web')
+                    END AS cliente
+                FROM pedidos p
+                LEFT JOIN usuarios u ON p.id_cliente = u.id
+                ORDER BY p.id DESC`;
 
+            const [results] = await db.query(query);
+            return results;
+        } catch (error) {
+            console.error("❌ Error en getAdminPedidosLista:", error.message);
+            throw error;
+        }
+    },
 
     // 4. Obtener el desglose de arreglos florales de un pedido en base a su ID
     getAdminPedidoDetalle: async (id_pedido) => {

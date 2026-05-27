@@ -122,7 +122,7 @@ const Pedidos = ({ user, API_BASE_URL }) => {
   const handleCambioFlor = (index, idFlor) => {
     const florEncontrada = listaFloresBD.find(f => f.id === Number(idFlor));
     const nuevasFilas = [...itemsSeleccionados];
-    nuevasFilas[index].id_flor = idFlor;
+     nuevasFilas[index].id_flor = idFlor;
     nuevasFilas[index].precio = florEncontrada ? Number(florEncontrada.precio) : 0;
     setItemsSeleccionados(nuevasFilas);
   };
@@ -149,30 +149,34 @@ const Pedidos = ({ user, API_BASE_URL }) => {
       return;
     }
 
-const payload = {
-      // Mantenemos los campos
-      cliente: cliente.trim(),
+    // ✅ SOLUCIÓN: Declaramos correctamente adminIdReal extrayéndolo de la sesión del Admin
+    const adminIdReal = user?.id || user?.id_usuario || 9;
+
+    // Concatena el nombre del cliente en la dirección de entrega de manera estructurada
+    const nombreClienteLimpio = cliente.trim();
+    const direccionLimpia = direccion.trim() || 'Recoge en tienda';
+    const direccionConNombre = `Cliente: ${nombreClienteLimpio} | Dir: ${direccionLimpia}`;
+
+    const payload = {
+      cliente: nombreClienteLimpio,
       telefono_contacto: telefono.trim(),
-      
-      // 🔥 TRUCO: Guardamos el Nombre del Cliente al principio de la dirección o dedicatoria
-      direccion_entrega: `Cliente: ${cliente.trim()} | Dir: ${direccion.trim() || 'Recoge en tienda'}`,
+      direccion_entrega: direccionConNombre, // Enviamos el camuflaje al backend
       dedicatoria: dedicatoria.trim(),
-      
       total: calcularTotalCompra(),
       flores: floresValidas,
-      id_cliente: adminIdReal, 
-      id_empleado: adminIdReal 
+      id_cliente: 1, // Tu ID de "Cliente Mostrador" verificado en MySQL
+      id_empleado: adminIdReal
     };
+
     try {
-// ✅ CÁMBIALO PARA QUE QUEDE ASÍ:
-const res = await fetch(`${API_BASE_URL}/pedidos`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${user?.token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify(payload)
-});
+      const res = await fetch(`${API_BASE_URL}/pedidos`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
       const data = await res.json();
 

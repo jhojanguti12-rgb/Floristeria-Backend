@@ -4,12 +4,10 @@ const Categorias = ({ user, API_BASE_URL }) => {
   const [categorias, setCategorias] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
 
   // 📝 Estados para controlar la edición en línea
   const [editandoId, setEditandoId] = useState(null);
   const [editNombre, setEditNombre] = useState('');
-  const [editDescripcion, setEditDescripcion] = useState('');
 
   // 🔄 Cargar las categorías automáticamente cuando el administrador entra a la pestaña
   useEffect(() => {
@@ -42,7 +40,7 @@ const Categorias = ({ user, API_BASE_URL }) => {
 
   // ➕ 2. POST: Registrar una nueva categoría en MySQL
   const handleCrearCategoria = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!nombre.trim()) return;
 
     try {
@@ -52,15 +50,13 @@ const Categorias = ({ user, API_BASE_URL }) => {
           'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ nombre: nombre.trim(), descripcion: descripcion.trim() })
+        body: JSON.stringify({ nombre: nombre.trim() }) // 🌟 Enviamos solo el nombre para evitar el error 500
       });
       const data = await res.json();
 
       if (res.ok) {
-        // La insertamos en el estado local ordenándola alfabéticamente
         setCategorias([...categorias, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
         setNombre('');
-        setDescripcion('');
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -69,53 +65,70 @@ const Categorias = ({ user, API_BASE_URL }) => {
     }
   };
 
-  // ✏️ Activar el modo edición cargando los valores actuales de la fila
+  // ✏️ Activar el modo edición cargando el valor actual de la fila
   const iniciarEdicion = (cat) => {
     setEditandoId(cat.id);
     setEditNombre(cat.nombre);
-    setEditDescripcion(cat.descripcion || '');
   };
 
   // ❌ Cancelar el modo edición y vaciar variables
   const cancelarEdicion = () => {
     setEditandoId(null);
     setEditNombre('');
-    setEditDescripcion('');
   };
 
-  // 💾 4. PUT: Actualizar los cambios de la categoría en MySQL
-  const handleActualizarCategoria = async (id) => {
+  // 💾 4. SIMULACIÓN DE PUT (Eliminar + Crear velozmente)
+  // Soluciona el error 404 de Render recreando el registro modificado de forma transparente
+  const handleActualizarCategoria = async (id, nombreViejo) => {
     if (!editNombre.trim()) {
       alert("El nombre de la categoría no puede estar vacío.");
       return;
     }
 
+    if (editNombre.trim().toLowerCase() === nombreViejo.toLowerCase()) {
+      cancelarEdicion();
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/categorias/${id}`, {
-        method: 'PUT',
+      // Paso A: Crear la nueva categoría corregida
+      const resPost = await fetch(`${API_BASE_URL}/categorias`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ nombre: editNombre.trim(), descripcion: editDescripcion.trim() })
+        body: JSON.stringify({ nombre: editNombre.trim() })
+      });
+      
+      const nuevaData = await resPost.json();
+
+      if (!resPost.ok) {
+        alert(`Error al guardar los cambios: ${nuevaData.error}`);
+        return;
+      }
+
+      // Paso B: Eliminar la categoría que tenía el error de ortografía
+      await fetch(`${API_BASE_URL}/categorias/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`
+        }
       });
 
-      const data = await res.json();
+      // Paso C: Actualizar la interfaz de inmediato en tiempo real
+      setCategorias(
+        categorias
+          .filter(cat => cat.id !== id) // Quitamos la vieja
+          .concat(nuevaData)            // Metemos la nueva
+          .sort((a, b) => a.nombre.localeCompare(b.nombre)) // Reordenamos
+      );
 
-      if (res.ok) {
-        // Actualizamos de inmediato en el estado local de React
-        setCategorias(categorias.map(cat => 
-          cat.id === id ? { ...cat, nombre: editNombre.trim(), descripcion: editDescripcion.trim() } : cat
-        ).sort((a, b) => a.nombre.localeCompare(b.nombre)));
-        
-        // Salimos del modo edición
-        cancelarEdicion();
-      } else {
-        alert(`Error al actualizar: ${data.error || 'No se pudo editar'}`);
-      }
+      cancelarEdicion();
+
     } catch (error) {
-      console.error("Error de red al actualizar la categoría:", error);
-      alert("Hubo un error de conexión con el servidor.");
+      console.error("Error en el proceso de actualización:", error);
+      alert("Hubo un problema de conexión al intentar actualizar.");
     }
   };
 
@@ -132,7 +145,6 @@ const Categorias = ({ user, API_BASE_URL }) => {
       });
 
       if (res.ok) {
-        // La removemos de la lista en pantalla instantáneamente
         setCategorias(categorias.filter(cat => cat.id !== id));
       } else {
         const data = await res.json();
@@ -177,17 +189,6 @@ const Categorias = ({ user, API_BASE_URL }) => {
               />
             </div>
 
-            <div>
-              <label className="block mb-1 uppercase tracking-wider">Descripción Breve</label>
-              <textarea 
-                placeholder="Explica qué tipo de arreglos o flores lleva esta categoría..." 
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                rows="3"
-                className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200 resize-none"
-              />
-            </div>
-
             <button type="submit" className="w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-white p-4 rounded-full font-black uppercase tracking-widest mt-2 shadow-md transition-all">
               ➕ Crear Categoría
             </button>
@@ -202,7 +203,6 @@ const Categorias = ({ user, API_BASE_URL }) => {
                 <tr className="uppercase border-b border-gray-100 text-[10px] tracking-widest text-gray-400">
                   <th className="p-4 pl-2">ID</th>
                   <th className="p-4">Nombre de Colección</th>
-                  <th className="p-4">Descripción</th>
                   <th className="p-4 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -228,30 +228,13 @@ const Categorias = ({ user, API_BASE_URL }) => {
                         )}
                       </td>
                       
-                      {/* Celda de la Descripción */}
-                      <td className="p-4 text-xs font-medium max-w-xs">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={editDescripcion}
-                            onChange={(e) => setEditDescripcion(e.target.value)}
-                            placeholder="Añadir descripción..."
-                            className="p-2 border border-emerald-300 rounded-lg outline-none bg-white text-gray-600 w-full focus:ring-2 ring-emerald-200 text-xs"
-                          />
-                        ) : (
-                          <span className={cat.descripcion ? "text-gray-400" : "italic opacity-40"}>
-                            {cat.descripcion || "Sin descripción aportada"}
-                          </span>
-                        )}
-                      </td>
-                      
                       {/* Acciones Inteligentes */}
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center gap-3">
                           {isEditing ? (
                             <>
                               <button 
-                                onClick={() => handleActualizarCategoria(cat.id)}
+                                onClick={() => handleActualizarCategoria(cat.id, cat.nombre)}
                                 className="text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-all bg-emerald-100 px-2.5 py-1 rounded-md"
                               >
                                 💾 Guardar
@@ -286,7 +269,7 @@ const Categorias = ({ user, API_BASE_URL }) => {
                   );
                 }) : (
                   <tr>
-                    <td colSpan="4" className="text-center py-12 text-gray-400 font-bold">
+                    <td colSpan="3" className="text-center py-12 text-gray-400 font-bold">
                       No hay categorías registradas aún en tu base de datos.
                     </td>
                   </tr>

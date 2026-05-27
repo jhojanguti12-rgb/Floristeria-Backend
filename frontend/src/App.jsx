@@ -16,8 +16,6 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0 
 }).format(Number(val) || 0);
 
-
-
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
   const [loading, setLoading] = useState(false);
@@ -27,9 +25,10 @@ export default function App() {
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 🌟 ESTADOS NUEVOS PARA PERSONAL
+  // 🌟 ESTADOS NUEVOS PARA PERSONAL Y CATEGORÍAS REALES DE BD
   const [empleados, setEmpleados] = useState([]);
   const [showModalEmpleado, setShowModalEmpleado] = useState(false);
+  const [categoriasBD, setCategoriasBD] = useState([]); // Guardará la lista directa de MySQL
 
   const [stats, setStats] = useState({ 
     inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] 
@@ -37,21 +36,23 @@ export default function App() {
 
   const [productos, setProductos] = useState([]);
   const [imagenArchivo, setImagenArchivo] = useState(null);
-const [showModalEditar, setShowModalEditar] = useState(false);
+  const [showModalEditar, setShowModalEditar] = useState(false);
   const [productoEditando, setProductoEditando] = useState(null);
 
-  // EXTRACCIÓN DINÁMICA DE CATEGORÍAS
-  const categoriasExistentes = [
-    'Todas', 
-    ...new Set(
-      productos
-        .map(p => p.nombre_categoria || p.categoria || p.category || '')
-        .map(cat => cat.trim()) 
-        .filter(cat => cat.length > 0) 
-    )
-  ];
+  // 🌟 MEJORA EXTRAORDINARIA: Cargar categorías directamente desde la Base de Datos
+  const fetchCategoriasBD = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/categorias`);
+      if (res.ok) {
+        const datos = await res.json();
+        setCategoriasBD(Array.isArray(datos) ? datos : []);
+      }
+    } catch (error) {
+      console.error("Error cargando categorías reales de la BD:", error);
+    }
+  }, []);
 
-  // 🌟 FUNCIÓN NUEVA: TRAER LA LISTA DE EMPLEADOS DESDE TU API
+  // 🌟 FUNCIÓN TRABAJADORES
   const fetchEmpleados = useCallback(async () => {
     if (!user?.token) return;
     try {
@@ -100,13 +101,14 @@ const [showModalEditar, setShowModalEditar] = useState(false);
     }
   }, [user]);
 
-  // CARGAR TODO AL CAMBIAR O INICIAR SESIÓN
+  // SINCRO GENERAL AL INICIAR SESIÓN
   useEffect(() => {
     if (user) {
       fetchData();
       fetchEmpleados();
+      fetchCategoriasBD(); // Sincroniza las pestañas con MySQL de Render
     }
-  }, [user, fetchData, fetchEmpleados]);
+  }, [user, fetchData, fetchEmpleados, fetchCategoriasBD]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -131,7 +133,7 @@ const [showModalEditar, setShowModalEditar] = useState(false);
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      setLoading(false);
+      loading(false);
     }
   };
 
@@ -167,6 +169,7 @@ const [showModalEditar, setShowModalEditar] = useState(false);
       if (res.ok) {
         setImagenArchivo(null); 
         fetchData();
+        fetchCategoriasBD(); // Sincroniza por si se creó una categoría sobre la marcha
         setShowModal(false);
       } else {
         const errData = await res.json();
@@ -207,18 +210,17 @@ const [showModalEditar, setShowModalEditar] = useState(false);
       }
     }
   };
-const handleActualizarProducto = async (e) => {
+
+  const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
-    // Detectamos el ID numérico de la fila
     const idTarget = productoEditando.id || productoEditando._id;
     if (!idTarget) {
       alert("Error: El producto no tiene un identificador válido.");
       return;
     }
 
-    // Estructuramos el JSON limpio con los tipos de datos correctos para tu servidor
     const datosEnviar = {
       nombre: productoEditando.nombre,
       stock: Number(productoEditando.stock),
@@ -226,7 +228,6 @@ const handleActualizarProducto = async (e) => {
     };
 
     try {
-      // Apuntamos directamente a la ruta que procesó el backend (/api/productos/:id)
       const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
         method: 'PUT',
         headers: {
@@ -237,7 +238,6 @@ const handleActualizarProducto = async (e) => {
       });
 
       if (res.ok) {
-        // 1. Refrescamos el estado de React al instante
         setProductos(prevProductos =>
           prevProductos.map(p => 
             String(p.id || p._id) === String(idTarget) 
@@ -251,12 +251,10 @@ const handleActualizarProducto = async (e) => {
           )
         );
         
-        // 2. Cerramos el modal de edición
         setShowModalEditar(false);
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente en la base de datos!');
         
-        // 3. Sincronizamos los datos con la API de Render
         if (typeof fetchData === 'function') {
           fetchData();
         }
@@ -269,7 +267,7 @@ const handleActualizarProducto = async (e) => {
       alert('Error de conexión con el servidor de Render.');
     }
   };
-  // 🌟 FUNCIÓN NUEVA: ENVIAR FORMULARIO DE NUEVO EMPLEADO AL BACKEND
+
   const handleCrearEmpleado = async (e) => {
     e.preventDefault();
     const nombre = e.target.elements.emp_nombre.value;
@@ -293,8 +291,8 @@ const handleActualizarProducto = async (e) => {
         alert(respuesta.mensaje || "✅ Empleado registrado correctamente.");
         setShowModalEmpleado(false);
         e.target.reset();
-        fetchEmpleados(); // Refresca la tabla automáticamente
-        fetchData(); // Refresca los contadores de las tarjetas de arriba
+        fetchEmpleados();
+        fetchData();
       } else {
         alert(respuesta.mensaje || "Error al registrar empleado.");
       }
@@ -303,7 +301,6 @@ const handleActualizarProducto = async (e) => {
     }
   };
 
-  // 🌟 FUNCIÓN NUEVA: ELIMINAR UN TRABAJADOR DE LA BASE DE DATOS
   const handleEliminarEmpleado = async (idEmpleado) => {
     if (window.confirm("¿Estás seguro de que deseas dar de baja a este empleado?")) {
       try {
@@ -340,16 +337,17 @@ const handleActualizarProducto = async (e) => {
         alertas.push({
           id: p.id || p._id,
           mensaje: `${p.nombre} - Verificar lote`,
-          detalle: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
+          text: `Registrado hace ${diferenciaDias} días. Riesgo de marchitez.`
         });
       }
     });
     return alertas;
   };
 
+  // FILTRADO INTELIGENTE ASOCIADO A LAS CATEGORÍAS REALES
   const productosFiltrados = productos.filter(p => {
     const pCat = p.nombre_categoria || p.categoria || p.category || '';
-    const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim() === filtroCategoria;
+    const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim().toLowerCase() === filtroCategoria.toLowerCase();
     const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
     return cumpleCategoria && cumpleBusqueda;
   });
@@ -408,28 +406,16 @@ const handleActualizarProducto = async (e) => {
           <div onClick={() => { setActiveTab('inventario'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inventario' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📦</span> <span>Inventario</span>
           </div>
-          
-{/* Enlace de navegación para Personal */}
           <div onClick={() => { setActiveTab('personal'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'personal' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🧑‍💼</span> <span>Personal</span>
           </div>
-
-          {/* Enlace de navegación para Pedidos */}
           <div onClick={() => { setActiveTab('pedidos'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'pedidos' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🧾</span> <span>Pedidos</span>
           </div>
-
-          {/* Enlace de navegación para Categorías */}
           <div onClick={() => { setActiveTab('categorias'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'categorias' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📂</span> <span>Categorías</span>
           </div>
         </nav>
-
-
-
-
-
-
         
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
@@ -511,14 +497,23 @@ const handleActualizarProducto = async (e) => {
               <div>
                 <h2 className="text-3xl font-black text-[#1b4332] uppercase tracking-tighter">Inventario de Flores</h2>
                 
+                {/* 🌟 PESTAÑAS INTEGRADAS CON MYSQL DE FORMA REAL */}
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {categoriasExistentes.map((cat) => (
+                  <button 
+                    onClick={() => setFiltroCategoria('Todas')}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === 'Todas' ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    Todas las Flores
+                  </button>
+                  
+                  {/* Aquí mapeamos las categorías reales traídas desde el backend */}
+                  {categoriasBD.map((cat) => (
                     <button 
-                      key={cat} 
-                      onClick={() => setFiltroCategoria(cat)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === cat ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                      key={cat.id} 
+                      onClick={() => setFiltroCategoria(cat.nombre)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria.toLowerCase() === cat.nombre.toLowerCase() ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                     >
-                      {cat}
+                      {cat.nombre}
                     </button>
                   ))}
                 </div>
@@ -550,12 +545,7 @@ const handleActualizarProducto = async (e) => {
                   const prodId = prod.id || prod._id;
                   const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
                   
-                  // ✅ Lógica limpia: usa la foto de la base de datos o una fija de respaldo
-           
-
-        // ✅ Lógica ultra limpia: Usa la URL directa de Cloudinary o la foto de respaldo si no hay imagen
                   const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
-
                   const imagenSrc = urlFotoReal || 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600';
 
                   return (
@@ -566,7 +556,6 @@ const handleActualizarProducto = async (e) => {
                           alt={prod.nombre} 
                           className="w-full h-full object-cover"
                           onError={(e) => { 
-                            // ✅ Cambiado para que no dependa de la función vieja y muestre el respaldo estático
                             e.target.src = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; 
                           }} 
                         />
@@ -583,7 +572,6 @@ const handleActualizarProducto = async (e) => {
                         </div>
                         
                         <div className="flex gap-3">
-                          {/* ✏️ BOTÓN EDITAR */}
                           <button 
                             onClick={() => {
                               setProductoEditando(prod);
@@ -594,7 +582,6 @@ const handleActualizarProducto = async (e) => {
                             ✏️ Editar
                           </button>
 
-                          {/* 🗑️ BOTÓN ELIMINAR */}
                           <button 
                             onClick={() => handleEliminarProducto(prodId)} 
                             className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all flex items-center gap-1"
@@ -620,7 +607,7 @@ const handleActualizarProducto = async (e) => {
                   {obtenerAlertasFrescura().length > 0 ? obtenerAlertasFrescura().map((alerta) => (
                     <div key={alerta.id} className="bg-orange-50/70 p-4 rounded-2xl border border-orange-100 text-xs">
                       <p className="font-black text-orange-700 mb-1">🔸 {alerta.mensaje}</p>
-                      <p className="text-gray-500 font-semibold leading-snug">{alerta.detalle}</p>
+                      <p className="text-gray-500 font-semibold leading-snug">{alerta.text}</p>
                     </div>
                   )) : (
                     <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 text-xs">
@@ -635,24 +622,9 @@ const handleActualizarProducto = async (e) => {
           </div>
         )}
 
-{activeTab === 'personal' && (
-  <Personal user={user} API_BASE_URL={API_BASE_URL} />
-)}
-{activeTab === 'pedidos' && (
-  <Pedidos user={user} API_BASE_URL={API_BASE_URL} />
-)}
-
-{/* 🌟 NUEVA VISTA CENTRAL DE CATEGORÍAS */}
-{activeTab === 'categorias' && (
-  <Categorias user={user} API_BASE_URL={API_BASE_URL} />
-)}
-
-
-
-
-
-
-
+        {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} />}
+        {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} />}
+        {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} />}
 
       </main>
 
@@ -660,8 +632,6 @@ const handleActualizarProducto = async (e) => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
-            
-            {/* Botón para cerrar el modal */}
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold">✖️</button>
 
             <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Agregar Nueva Flor</h3>
@@ -678,17 +648,15 @@ const handleActualizarProducto = async (e) => {
                   type="text" 
                   name="categoria"
                   required 
-                  list="categorias-sugeridas" 
-                  placeholder="Escribe para buscar o crea una nueva..." 
+                  list="categorias-sugeridas-bd" 
+                  placeholder="Selecciona o escribe una colección..." 
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
-                <datalist id="categorias-sugeridas">
-                  {categoriasExistentes
-                    .filter(cat => cat !== 'Todas' && cat.trim() !== '')
-                    .map((cat, index) => (
-                      <option key={index} value={cat} />
-                    ))
-                  }
+                {/* 🌟 DATALIST CONECTADO CON TUS CATEGORÍAS REALES DE MYSQL */}
+                <datalist id="categorias-sugeridas-bd">
+                  {categoriasBD.map((cat) => (
+                    <option key={cat.id} value={cat.nombre} />
+                  ))}
                 </datalist>
               </div>
 
@@ -698,70 +666,33 @@ const handleActualizarProducto = async (e) => {
                   <input type="number" name="stock" required min="0" placeholder="45" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario ($) *</label>
+                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario (COP) *</label>
                   <input type="number" name="precio" required min="0" placeholder="5000" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
               </div>
 
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Subir Foto desde tu Computador</label>
+                <label className="block mb-1 uppercase tracking-wider">Fotografía del Lote</label>
                 <input 
                   type="file" 
                   accept="image/*" 
                   onChange={(e) => setImagenArchivo(e.target.files[0])} 
-                  className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-gray-50 text-gray-700 font-semibold focus:ring-2 ring-emerald-200 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#1b4332] file:text-white"
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-[#1b4332] hover:file:bg-emerald-100" 
                 />
               </div>
 
-              <button type="submit" className="w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-white p-4 rounded-full font-black uppercase tracking-widest mt-4 shadow-md transition-all">
-                Guardar Flor en la Nube
+              <button type="submit" className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
+                Guardar en Inventario
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL FORMULARIO: REGISTRAR EMPLEADO */}
-      {showModalEmpleado && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
-            <button onClick={() => setShowModalEmpleado(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold">✖️</button>
-            <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Registrar Personal</h3>
-            
-            <form onSubmit={handleCrearEmpleado} className="space-y-4 text-xs font-bold text-gray-500">
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Nombre Completo *</label>
-                <input type="text" name="emp_nombre" required placeholder="Ej. Jhojan Pérez" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
-              </div>
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Correo Electrónico *</label>
-                <input type="email" name="emp_email" required placeholder="empleado@floristeriva.com" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
-              </div>
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Contraseña de Acceso *</label>
-                <input type="password" name="emp_password" required placeholder="••••••••" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
-              </div>
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Rol / Cargo *</label>
-                <select name="emp_rol" className="w-full p-3 rounded-xl border border-gray-200 outline-none bg-white text-gray-700 font-semibold focus:ring-2 ring-emerald-200">
-                  <option value="vendedor">Vendedor / Personal</option>
-                  <option value="admin">Administrador</option>
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-[#42a5f5] hover:bg-[#1e88e5] text-white p-4 rounded-full font-black uppercase tracking-widest mt-4 shadow-md transition-all">
-                Registrar Empleado
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 🌟 NUEVO MODAL FORMULARIO: EDITAR PRODUCTO EXISTENTE */}
+      {/* MODAL EDITAR PRODUCTO */}
       {showModalEditar && productoEditando && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
-            
-            {/* Botón para cerrar el modal */}
             <button 
               onClick={() => { setShowModalEditar(false); setProductoEditando(null); }} 
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold"
@@ -773,57 +704,43 @@ const handleActualizarProducto = async (e) => {
             
             <form onSubmit={handleActualizarProducto} className="space-y-4 text-xs font-bold text-gray-500">
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Nombre del Producto *</label>
+                <label className="block mb-1 uppercase tracking-wider">Nombre del Producto</label>
                 <input 
                   type="text" 
-                  value={productoEditando.nombre || ''} 
+                  required
+                  value={productoEditando.nombre} 
                   onChange={(e) => setProductoEditando({...productoEditando, nombre: e.target.value})}
-                  required 
-                  className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 uppercase tracking-wider">Categoría *</label>
-                <input 
-                  type="text" 
-                  value={productoEditando.nombre_categoria || productoEditando.categoria || productoEditando.category || ''} 
-                  onChange={(e) => setProductoEditando({...productoEditando, categoria: e.target.value, nombre_categoria: e.target.value})}
-                  required 
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Stock Actual *</label>
+                  <label className="block mb-1 uppercase tracking-wider">Stock Disponible</label>
                   <input 
                     type="number" 
-                    value={productoEditando.stock ?? 0} 
+                    required
+                    min="0"
+                    value={productoEditando.stock} 
                     onChange={(e) => setProductoEditando({...productoEditando, stock: e.target.value})}
-                    required 
-                    min="0" 
                     className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario ($) *</label>
+                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario (COP)</label>
                   <input 
                     type="number" 
-                    value={productoEditando.precio ?? 0} 
+                    required
+                    min="0"
+                    value={productoEditando.precio} 
                     onChange={(e) => setProductoEditando({...productoEditando, precio: e.target.value})}
-                    required 
-                    min="0" 
                     className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                   />
                 </div>
               </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#123023] mt-4"
-              >
-                Guardar Cambios
+              <button type="submit" className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
+                Actualizar Cambios
               </button>
             </form>
           </div>

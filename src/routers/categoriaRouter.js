@@ -12,7 +12,7 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// 2. Crear categoría (POST /api/categorias) - VERSIÓN DE ALTA RESILIENCIA
+// 2. Crear categoría (POST /api/categorias) - MODO DIAGNÓSTICO DE MYSQL
 router.post('/', async (req, res, next) => {
     try {
         const nombre = req.body && req.body.nombre ? req.body.nombre.toString().trim() : '';
@@ -22,13 +22,9 @@ router.post('/', async (req, res, next) => {
             return res.status(400).json({ error: "El nombre es requerido" });
         }
 
-        // Ejecutamos la inserción en el servicio
         const resultado = await categoriaService.createCategoria({ nombre, descripcion });
-        
-        // Obtenemos el ID generado de manera ultra-segura
         const nuevoId = resultado && resultado.insertId ? resultado.insertId : Math.floor(Math.random() * 1000);
 
-        // Retornamos el JSON plano de inmediato para el Frontend
         return res.status(201).json({ 
             id: nuevoId, 
             nombre: nombre, 
@@ -37,11 +33,11 @@ router.post('/', async (req, res, next) => {
 
     } catch (error) {
         console.error("💥 Error capturado en el Router POST:", error.message);
-        // Respondemos con un JSON estructurado en lugar de dejar que Express rompa la petición
-        return res.status(500).json({ error: "Error interno del servidor al guardar", detalle: error.message });
+        
+        // 🌟 CAMBIO CLAVE: Devolvemos el "error.message" real de MySQL a la alerta de la pantalla
+        return res.status(500).json({ error: error.message });
     }
 });
-
 // 3. Eliminar categoría (DELETE /api/categorias/:id)
 router.delete('/:id', async (req, res, next) => {
     try {

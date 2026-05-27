@@ -6,6 +6,7 @@ import {
 import fondoJardin from './fondo-jardin.jpg';
 import Personal from './components/Personal';
 import Pedidos from './components/Pedidos';
+import Categorias from './components/Categorias';
 
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
@@ -408,7 +409,7 @@ const handleActualizarProducto = async (e) => {
             <span className="text-lg">📦</span> <span>Inventario</span>
           </div>
           
-       {/* Enlace de navegación para Personal */}
+{/* Enlace de navegación para Personal */}
           <div onClick={() => { setActiveTab('personal'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'personal' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🧑‍💼</span> <span>Personal</span>
           </div>
@@ -417,7 +418,18 @@ const handleActualizarProducto = async (e) => {
           <div onClick={() => { setActiveTab('pedidos'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'pedidos' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🧾</span> <span>Pedidos</span>
           </div>
+
+          {/* Enlace de navegación para Categorías */}
+          <div onClick={() => { setActiveTab('categorias'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'categorias' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+            <span className="text-lg">📂</span> <span>Categorías</span>
+          </div>
         </nav>
+
+
+
+
+
+
         
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
@@ -627,8 +639,13 @@ const handleActualizarProducto = async (e) => {
   <Personal user={user} API_BASE_URL={API_BASE_URL} />
 )}
 {activeTab === 'pedidos' && (
-          <Pedidos user={user} API_BASE_URL={API_BASE_URL} />
-        )}
+  <Pedidos user={user} API_BASE_URL={API_BASE_URL} />
+)}
+
+{/* 🌟 NUEVA VISTA CENTRAL DE CATEGORÍAS */}
+{activeTab === 'categorias' && (
+  <Categorias user={user} API_BASE_URL={API_BASE_URL} />
+)}
 
 
 
@@ -637,10 +654,6 @@ const handleActualizarProducto = async (e) => {
 
 
 
-
-
-
-        
       </main>
 
       {/* MODAL FORMULARIO: AGREGAR FLOR */}

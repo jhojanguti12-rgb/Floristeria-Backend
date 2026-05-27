@@ -31,8 +31,9 @@ const pedidoService = {
         }
     },
 
-// 2. CREAR PEDIDO Y DESCONTAR STOCK (Corregido para evitar fallos de id_cliente NULL)
+// 2. CREAR PEDIDO Y DESCONTAR STOCK (Unificado para Web y Panel de Administración)
     createPedido: async (data) => {
+        // Adaptamos para recibir 'productos' (Web) o 'flores' (Modal de Admin)
         const listaProductos = data.productos || data.flores;
         
         const clienteNombre = data.cliente || 'Comprador Físico';
@@ -40,8 +41,7 @@ const pedidoService = {
         const direccion = data.direccion_entrega || 'Recoge en Tienda';
         const dedicatoriaTexto = data.dedicatoria || '';
         
-        // 🔥 CORRECCIÓN AQUÍ: Si id_cliente es null o vacío, le asignamos el ID 1 (Cliente General / Mostrador)
-        // Asegúrate de tener al menos un usuario/cliente creado en tu base de datos con ID 1
+        // 🔥 AQUÍ ESTÁ EL TRUCO REAL: Forzamos el ID 1 que acabamos de verificar en tu MySQL Workbench
         const id_cliente = data.id_cliente || 1; 
         const id_empleado = data.id_empleado || null; 
         const total = data.total || 0;

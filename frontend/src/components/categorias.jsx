@@ -77,58 +77,48 @@ const Categorias = ({ user, API_BASE_URL }) => {
     setEditNombre('');
   };
 
-  // 💾 4. SIMULACIÓN DE PUT (Eliminar + Crear velozmente)
-  // Soluciona el error 404 de Render recreando el registro modificado de forma transparente
+// 💾 4. PUT: Actualizar de forma real en la Base de Datos
   const handleActualizarCategoria = async (id, nombreViejo) => {
     if (!editNombre.trim()) {
       alert("El nombre de la categoría no puede estar vacío.");
       return;
     }
 
+    // Si el usuario no cambió nada en el texto, cancelamos sin recargar el servidor
     if (editNombre.trim().toLowerCase() === nombreViejo.toLowerCase()) {
       cancelarEdicion();
       return;
     }
 
     try {
-      // Paso A: Crear la nueva categoría corregida
-      const resPost = await fetch(`${API_BASE_URL}/categorias`, {
-        method: 'POST',
+      // 🚀 Hacemos la petición PUT directa al backend en Render
+      const res = await fetch(`${API_BASE_URL}/categorias/${id}`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ nombre: editNombre.trim() })
       });
-      
-      const nuevaData = await resPost.json();
 
-      if (!resPost.ok) {
-        alert(`Error al guardar los cambios: ${nuevaData.error}`);
-        return;
+      const data = await res.json();
+
+      if (res.ok) {
+        // 🔄 Actualizamos el estado local de React inmediatamente
+        setCategorias(
+          categorias
+            .map(cat => (cat.id === id ? { ...cat, nombre: editNombre.trim() } : cat))
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)) // Mantiene el orden alfabético
+        );
+        
+        cancelarEdicion();
+        alert("¡Categoría actualizada con éxito!");
+      } else {
+        alert(`Error al actualizar: ${data.error || 'No se pudo editar'}`);
       }
-
-      // Paso B: Eliminar la categoría que tenía el error de ortografía
-      await fetch(`${API_BASE_URL}/categorias/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        }
-      });
-
-      // Paso C: Actualizar la interfaz de inmediato en tiempo real
-      setCategorias(
-        categorias
-          .filter(cat => cat.id !== id) // Quitamos la vieja
-          .concat(nuevaData)            // Metemos la nueva
-          .sort((a, b) => a.nombre.localeCompare(b.nombre)) // Reordenamos
-      );
-
-      cancelarEdicion();
-
     } catch (error) {
-      console.error("Error en el proceso de actualización:", error);
-      alert("Hubo un problema de conexión al intentar actualizar.");
+      console.error("Error de red al actualizar la categoría:", error);
+      alert("Hubo un error de conexión con el servidor.");
     }
   };
 

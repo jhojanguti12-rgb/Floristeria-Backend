@@ -41,31 +41,23 @@ const categoriaService = {
         }
     },
 
-    // 🌟 4. Actualizar una categoría y sincronizar el Inventario (MODIFICADO)
+// 🌟 4. Actualizar una categoría de forma segura usando su ID
     updateCategoria: async (id, nuevoNombre) => {
         try {
-            // A. Consultamos el nombre antiguo de la categoría antes de cambiarlo
-            const [rows] = await db.query('SELECT nombre FROM categorias WHERE id = ?', [id]);
+            // Actualizamos el nombre en la tabla 'categorias' basándonos estrictamente en su ID numérico
+            const [result] = await db.query(
+                'UPDATE categorias SET nombre = ? WHERE id = ?', 
+                [nuevoNombre, id]
+            );
             
-            if (!rows || rows.length === 0) {
-                throw new Error("La categoría que intentas editar no existe.");
-            }
-            const nombreAntiguo = rows[0].nombre;
-
-            // B. Actualizamos el nombre en la tabla original de 'categorias'
-            const [result] = await db.query('UPDATE categorias SET nombre = ? WHERE id = ?', [nuevoNombre, id]);
-
-            // C. ¡La Magia! Sincronizamos las flores antiguas que guardaron el nombre como texto plano
-            // Esto evitará que se dupliquen o queden huérfanas las pestañas del inventario
-            await db.query('UPDATE flores SET categoria = ? WHERE categoria = ?', [nuevoNombre, nombreAntiguo]);
-
+            // Nota: Al estar vinculadas las tablas mediante id_categoria, 
+            // el inventario leerá automáticamente el nuevo nombre modificado.
             return result;
         } catch (error) {
             console.error("❌ Error al actualizar categoría en Service:", error.message);
             throw error;
         }
     },
-
     // 5. Eliminar una categoría
     deleteCategoria: async (id) => {
         try {

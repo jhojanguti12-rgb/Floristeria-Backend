@@ -422,7 +422,17 @@ export default function App() {
           <div onClick={() => { setActiveTab('categorias'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'categorias' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📂</span> <span>Categorías</span>
           </div>
+          {/* 🌟 NUEVA PESTAÑA DE PROVEEDORES */}
+  <div onClick={() => { setActiveTab('proveedores'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'proveedores' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+    <span className="text-lg">🤝</span> <span>Proveedores</span>
+  </div>
+
         </nav>
+        
+
+
+
+
         
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
@@ -632,6 +642,7 @@ export default function App() {
         {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} onPersonalCambiado={fetchData} />}
         {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} onPedidoCreado={fetchData} />}
         {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} onCategoriasCambiadas={fetchCategoriasBD} />}
+        {activeTab === 'proveedores' && <Proveedores user={user} API_BASE_URL={API_BASE_URL} />}
 
       </main>
 

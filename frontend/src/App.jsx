@@ -7,7 +7,7 @@ import fondoJardin from './fondo-jardin.jpg';
 import Personal from './components/Personal';
 import Pedidos from './components/Pedidos';
 import Categorias from './components/categorias';
-import Proveedores from './components/Proveedores'; 
+import Proveedores from './components/proveedoresroveedores'; 
 
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 

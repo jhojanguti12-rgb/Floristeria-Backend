@@ -41,12 +41,27 @@ const categoriaService = {
         }
     },
 
-    // 4. Actualizar una categoría
-    updateCategoria: async (id, data) => {
+    // 🌟 4. Actualizar una categoría y sincronizar el Inventario (MODIFICADO)
+    updateCategoria: async (id, nuevoNombre) => {
         try {
-            const [result] = await db.query('UPDATE categorias SET ? WHERE id = ?', [data, id]);
+            // A. Consultamos el nombre antiguo de la categoría antes de cambiarlo
+            const [rows] = await db.query('SELECT nombre FROM categorias WHERE id = ?', [id]);
+            
+            if (!rows || rows.length === 0) {
+                throw new Error("La categoría que intentas editar no existe.");
+            }
+            const nombreAntiguo = rows[0].nombre;
+
+            // B. Actualizamos el nombre en la tabla original de 'categorias'
+            const [result] = await db.query('UPDATE categorias SET nombre = ? WHERE id = ?', [nuevoNombre, id]);
+
+            // C. ¡La Magia! Sincronizamos las flores antiguas que guardaron el nombre como texto plano
+            // Esto evitará que se dupliquen o queden huérfanas las pestañas del inventario
+            await db.query('UPDATE flores SET categoria = ? WHERE categoria = ?', [nuevoNombre, nombreAntiguo]);
+
             return result;
         } catch (error) {
+            console.error("❌ Error al actualizar categoría en Service:", error.message);
             throw error;
         }
     },

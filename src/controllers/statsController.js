@@ -78,46 +78,59 @@ exports.stressTestExcel = async (req, res) => {
     });
   }
 };
-// Función para obtener el resumen de estadísticas generales
+// Función corregida con el formato exacto que espera tu Frontend (App.jsx)
 exports.obtenerEstadisticasGenerales = async (req, res) => {
   try {
-    // 1. Sumar todo el stock actual en la tabla de flores
-    const queryStock = 'SELECT SUM(stock) AS totalStock FROM flores';
+    // 1. Sumar el stock total de la tabla flores
+    const queryStock = 'SELECT COALESCE(SUM(stock), 0) AS inventario FROM flores';
     
-    // 2. Contar el número de pedidos en la tabla pedidos
-    const queryPedidos = 'SELECT COUNT(*) AS totalPedidos FROM pedidos';
+    // 2. Contar el total de pedidos
+    const queryPedidos = 'SELECT COUNT(*) AS pedidosCount FROM pedidos';
     
-    // 3. Sumar el total de dinero recaudado en la tabla pagos (o pedidos si manejas total ahí)
-    const queryVentas = 'SELECT SUM(monto) AS totalVentas FROM pagos'; 
+    // 3. Sumar el total de ventas (puedes apuntar a la tabla pagos o pedidos según tu estructura)
+    // Usamos COALESCE por si la tabla está vacía, para que devuelva 0 en vez de NULL
+    const queryVentas = 'SELECT COALESCE(SUM(total), 0) AS ventasTotal FROM pedidos'; 
+    
+    // 4. Contar el total de personal/usuarios
+    const queryPersonal = 'SELECT COUNT(*) AS personal FROM usuarios';
 
-    // Ejecutar las consultas de forma segura (utilizando el método que use tu base de datos)
-    let stockResult, pedidosResult, ventasResult;
+    // 5. Obtener los últimos 5 pedidos para la tabla del inicio
+    const queryListaPedidos = 'SELECT id, cliente, total, fecha FROM pedidos ORDER BY id DESC LIMIT 5';
+
+    let stockRes, pedidosRes, ventasRes, personalRes, listaRes;
 
     if (db.execute) {
-      [stockResult] = await db.execute(queryStock);
-      [pedidosResult] = await db.execute(queryPedidos);
-      [ventasResult] = await db.execute(queryVentas);
+      [stockRes] = await db.execute(queryStock);
+      [pedidosRes] = await db.execute(queryPedidos);
+      [ventasRes] = await db.execute(queryVentas);
+      [personalRes] = await db.execute(queryPersonal);
+      [listaRes] = await db.execute(queryListaPedidos);
     } else {
-      [stockResult] = await db.query(queryStock);
-      [pedidosResult] = await db.query(queryPedidos);
-      [ventasResult] = await db.query(queryVentas);
+      [stockRes] = await db.query(queryStock);
+      [pedidosRes] = await db.query(queryPedidos);
+      [ventasRes] = await db.query(queryVentas);
+      [personalRes] = await db.query(queryPersonal);
+      [listaRes] = await db.query(queryListaPedidos);
     }
 
-    // Extraer los valores numéricos o poner 0 si es NULL
-    const totalStock = stockResult[0]?.totalStock || 0;
-    const totalPedidos = pedidosResult[0]?.totalPedidos || 0;
-    const totalVentas = ventasResult[0]?.totalVentas || 0;
+    // 6. Construir la respuesta con los nombres EXACTOS de tu App.jsx
+    const respuestaDashboard = {
+      inventario: Number(stockRes[0]?.inventario) || 0,
+      personal: Number(personalRes[0]?.personal) || 0,
+      pedidosCount: Number(pedidosRes[0]?.pedidosCount) || 0,
+      ventasTotal: Number(ventasRes[0]?.ventasTotal) || 0,
+      pedidosLista: Array.isArray(listaRes) ? listaRes : []
+    };
 
-    // Responder al frontend con el formato exacto que espera recibir
-    return res.json({
-      pedidos: totalPedidos,
-      ventas: totalVentas,
-      stock: totalStock,
-      personal: 0 // Puedes dejarlo fijo o hacer una consulta a la tabla empleados si lo deseas
-    });
+    console.log("Enviando estadísticas al frontend:", respuestaDashboard);
+    
+    return res.json(respuestaDashboard);
 
   } catch (error) {
     console.error('🔴 Error al obtener estadísticas:', error);
-    return res.status(500).json({ mensaje: 'Error al compilar el resumen del panel.' });
+    return res.status(500).json({ 
+      mensaje: 'Error al compilar el resumen del panel.',
+      error: error.message 
+    });
   }
 };

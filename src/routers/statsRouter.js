@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const statsController = require('../controllers/statsController');
 
-// 🚀 1. LA RUTA ESPECÍFICA DEL PARCIAL DEBE IR PRIMERO 
-router.get('/stress-test', statsController.ejecutarParcialPerformance);
+// Configurar multer para almacenar temporalmente el archivo en memoria RAM
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// 2. La ruta general del Dashboard va después
-router.get('/', statsController.getResumen);
+// Definir la ruta que recibirá el archivo Excel
+// Al usar upload.single('file'), le decimos que busque el archivo que React mandó bajo el nombre 'file'
+router.post('/stress-test', upload.single('file'), statsController.stressTestExcel);
 
 module.exports = router;

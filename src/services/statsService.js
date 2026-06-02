@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-// --- FUNCIÓN ACTUAL DE TU DASHBOARD (SE CONSERVA INTACTA) ---
+// --- FUNCIÓN DEL DASHBOARD COMERCIAL (CONSERVADA) ---
 const getResumenStats = async () => {
   try {
     const [resFlores] = await db.query('SELECT COUNT(*) as t FROM flores');
@@ -54,50 +54,42 @@ const getResumenStats = async () => {
 };
 
 // =================================================================
-// 🌟 NUEVAS FUNCIONES PARA EL PARCIAL DE BASE DE DATOS
+// 🌟 PUNTO 1 DEL PARCIAL (RF-01): INYECCIÓN MASIVA DE FLORES REALES
 // =================================================================
-
-// 🚀 RF-01: Inyección masiva de registros utilizando una transacción veloz
-const ejecutarStressTestInyeccion = async (cantidad) => {
-  const connection = await db.getConnection(); // Tomamos una conexión única dedicada
+const ejecutarInyeccionMasivaFlores = async (cantidad) => {
+  const connection = await db.getConnection(); 
   try {
-    await connection.beginTransaction(); // Iniciamos transacción en MySQL
+    await connection.beginTransaction(); // Transacción de alta velocidad
 
-    const query = 'INSERT INTO proveedores (nombre, telefono, contacto_nombre) VALUES (?, ?, ?)';
+    // Usamos el ID 11 que verificamos en tu Workbench ("flores ornamentales")
+    const idCategoriaExistente = 11; 
+
+    // Query con columnas exactas en minúsculas
+    const query = 'INSERT INTO flores (nombre, precio, stock, id_categoria) VALUES (?, ?, ?, ?)';
     
+    const tiposFlores = ['Rosa Roja Premium', 'Girasol Gigante', 'Tulipán Holandés', 'Orquídea Blanca', 'Lirio Perfumado'];
+
     for (let i = 1; i <= cantidad; i++) {
-      const nombre = `Stress Test Prov ${i}`;
-      const telefono = `300${String(i).padStart(7, '0')}`;
-      const contacto = `Asesor Evaluacion ${i}`;
-      
-      await connection.query(query, [nombre, telefono, contacto]);
+      const tipoBase = tiposFlores[i % tiposFlores.length];
+      const nombreFlor = `${tipoBase} Lote-${i}`;
+      const precio = Math.floor(Math.random() * (45000 - 12000 + 1)) + 12000; // Precios entre 12k y 45k
+      const stock = Math.floor(Math.random() * (120 - 15 + 1)) + 15; // Stock entre 15 y 120 unidades
+
+      await connection.query(query, [nombreFlor, precio, stock, idCategoriaExistente]);
     }
 
-    await connection.commit(); // Guardamos los 1050 registros de un solo golpe en Aiven
+    await connection.commit(); // Guardamos los 1050 productos de un solo golpe
     return true;
   } catch (error) {
-    await connection.rollback(); // Si falla, revierte todo para proteger la DB
-    console.error("❌ Error en ejecutarStressTestInyeccion:", error.message);
+    await connection.rollback(); 
+    console.error("❌ Error en ejecutarInyeccionMasivaFlores:", error.message);
     throw error;
   } finally {
-    connection.release(); // Liberamos la conexión de vuelta al pool
-  }
-};
-
-// 📊 RF-02: Consulta para saber cuántos registros tiene la tabla
-const obtenerConteoFilasParcial = async () => {
-  try {
-    const query = 'SELECT COUNT(*) AS total FROM proveedores';
-    const [rows] = await db.query(query);
-    return rows[0].total;
-  } catch (error) {
-    console.error("❌ Error en obtenerConteoFilasParcial:", error.message);
-    throw error;
+    connection.release(); 
   }
 };
 
 module.exports = { 
   getResumenStats, 
-  ejecutarStressTestInyeccion, 
-  obtenerConteoFilasParcial 
+  ejecutarInyeccionMasivaFlores 
 };

@@ -40,9 +40,6 @@ export default function App() {
   const [showModalEditar, setShowModalEditar] = useState(false);
   const [productoEditando, setProductoEditando] = useState(null);
 
-  // 🌟 ESTADO NUEVO PARA LA CARGA MASIVA DE EXCEL
-  const [cargandoExcel, setCargandoExcel] = useState(false);
-
   // 🌟 Cargar categorías directamente desde la Base de Datos
   const fetchCategoriasBD = useCallback(async () => {
     try {
@@ -80,6 +77,7 @@ export default function App() {
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
+      // Agregamos un timestamp para forzar a Render a darnos datos frescos sin caché de navegador
       const resStats = await fetch(`${API_BASE_URL}/stats?t=${new Date().getTime()}`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
@@ -138,11 +136,12 @@ export default function App() {
     } catch (err) {
       alert("No se pudo conectar con el servidor.");
     } finally {
-      loading(false);
+      setLoading(false);
     }
   };
 
   const handlebgAgregarProducto = async (e) => {
+    // Alias para compatibilidad de funciones
     handleAgregarProducto(e);
   };
 
@@ -186,46 +185,6 @@ export default function App() {
       }
     } catch (error) {
       alert("Error de conexión al guardar.");
-    }
-  };
-
-  // 🚀 NUEVA FUNCIÓN: MANEJADOR DE CARGA MASIVA DE EXCEL (PARCIAL RF-01)
-  const handleImportarExcel = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!window.confirm(`¿Deseas procesar e inyectar el archivo "${file.name}" en la base de datos?`)) {
-      e.target.value = ''; // Resetea el input
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('excelFile', file);
-
-    try {
-      setCargandoExcel(true);
-      const res = await fetch(`${API_BASE_URL}/flores/importar-excel`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: formData
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(`🎉 ¡Éxito en el Parcial!\n\n${data.mensaje}\nTotal actual en Inventario (RF-02): ${data.rf_02_total_filas_inventario} productos.`);
-        fetchData(); // Recarga los productos e inventario en pantalla al instante
-      } else {
-        alert(`❌ Error al importar Excel: ${data.error || 'Verifica el formato.'}`);
-      }
-    } catch (error) {
-      console.error("Error cargando el excel:", error);
-      alert("Ocurrió un error de red al comunicarse con Render.");
-    } finally {
-      setCargandoExcel(false);
-      e.target.value = ''; // Limpia el file input
     }
   };
 
@@ -390,6 +349,7 @@ export default function App() {
     return alertas;
   };
 
+  // FILTRADO INTELIGENTE
   const productosFiltrados = productos.filter(p => {
     const pCat = p.nombre_categoria || p.categoria || p.category || '';
     const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim().toLowerCase() === filtroCategoria.toLowerCase();
@@ -397,6 +357,7 @@ export default function App() {
     return cumpleCategoria && cumpleBusqueda;
   });
 
+  // --- RENDERIZADO CONDICIONAL DE LOGIN ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -417,6 +378,7 @@ export default function App() {
     );
   }
 
+  // --- RENDERIZADO PANEL DE CONTROL ---
   return (
     <div className="min-h-screen bg-[#eef3f7] flex flex-col md:flex-row font-sans relative overflow-x-hidden">
       
@@ -461,10 +423,17 @@ export default function App() {
           <div onClick={() => { setActiveTab('categorias'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'categorias' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📂</span> <span>Categorías</span>
           </div>
-          <div onClick={() => { setActiveTab('proveedores'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'proveedores' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
-            <span className="text-lg">🤝</span> <span>Proveedores</span>
-          </div>
+          {/* 🌟 NUEVA PESTAÑA DE PROVEEDORES */}
+  <div onClick={() => { setActiveTab('proveedores'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'proveedores' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+    <span className="text-lg">🤝</span> <span>Proveedores</span>
+  </div>
+
         </nav>
+        
+
+
+
+
         
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
@@ -529,6 +498,7 @@ export default function App() {
                     <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-2">
                       <div>
                         <p className="text-[9px] font-black text-gray-300 uppercase">#{String(p.id || p._id).substring(0,5)}</p>
+                        {/* 🌟 CORREGIDO: Muestra 'nombre' o 'cliente' dinámico del backend sin congelarse */}
                         <p className="text-sm font-black text-gray-700">{p.nombre || p.cliente}</p>
                       </div>
                       <p className="text-sm font-black text-emerald-600">{formatCOP(p.total)}</p>
@@ -566,27 +536,14 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <input 
                   type="text" 
                   placeholder="Buscar flor o producto..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-48 shadow-xs"
+                  className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-64 shadow-xs"
                 />
-
-                {/* 🌟 BOTÓN EN LA INTERFAZ: IMPORTAR EXCEL (REQUERIMIENTO DEL PARCIAL) */}
-                <label className={`cursor-pointer font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0 text-white transition-all ${cargandoExcel ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
-                  {cargandoExcel ? '🚀 Inyectando...' : '📤 Importar Excel'}
-                  <input 
-                    type="file" 
-                    accept=".xlsx, .xls" 
-                    onChange={handleImportarExcel} 
-                    disabled={cargandoExcel}
-                    className="hidden" 
-                  />
-                </label>
-
                 <button onClick={() => setShowModal(true)} className="bg-[#f06292] hover:bg-[#ec407a] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0">
                   + Añadir Producto
                 </button>
@@ -629,7 +586,6 @@ export default function App() {
                           <h4 className="font-black text-gray-800 text-lg leading-tight mb-1">{prod.nombre}</h4>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{displayCat}</p>
                           <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">{prod.stock} und</span></p>
-                          <p className="text-sm font-black text-[#1b4332] mt-1">{formatCOP(prod.precio)}</p>
                         </div>
                         
                         <div className="flex gap-3 mt-4">
@@ -683,6 +639,7 @@ export default function App() {
           </div>
         )}
 
+        {/* 🌟 SECCIÓN COMPONENTES: Inyección de la función re-fetch para limpiar la vista */}
         {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} onPersonalCambiado={fetchData} />}
         {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} onPedidoCreado={fetchData} />}
         {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} onCategoriasCambiadas={fetchCategoriasBD} />}
@@ -715,39 +672,51 @@ export default function App() {
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
                 <datalist id="categorias-sugeridas-bd">
-                  {categoriasBD.map(c => <option key={c.id} value={c.nombre} />)}
+                  {categoriasBD.map((cat) => (
+                    <option key={cat.id} value={cat.nombre} />
+                  ))}
                 </datalist>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Stock Inicial *</label>
-                  <input type="number" name="stock" required min="0" placeholder="0" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                  <label className="block mb-1 uppercase tracking-wider">Cantidad Inicial *</label>
+                  <input type="number" name="stock" required min="0" placeholder="45" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Precio COP *</label>
-                  <input type="number" name="precio" required min="0" placeholder="Valor" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
+                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario (COP) *</label>
+                  <input type="number" name="precio" required min="0" placeholder="5000" className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" />
                 </div>
               </div>
 
               <div>
-                <label className="block mb-1 uppercase tracking-wider">Foto del Producto (Opcional)</label>
-                <input type="file" onChange={(e) => setImagenArchivo(e.target.files[0])} accept="image/*" className="w-full text-gray-400 font-semibold" />
+                <label className="block mb-1 uppercase tracking-wider">Fotografía del Lote</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setImagenArchivo(e.target.files[0])} 
+                  className="w-full p-3 rounded-xl border border-gray-200 outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-[#1b4332] hover:file:bg-emerald-100" 
+                />
               </div>
 
-              <button className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
-                Guardar en Base de Datos
+              <button type="submit" className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
+                Guardar en Inventario
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL FORMULARIO: EDITAR FLOR */}
+      {/* MODAL EDITAR PRODUCTO */}
       {showModalEditar && productoEditando && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 md:p-8 shadow-2xl relative">
-            <button onClick={() => { setShowModalEditar(false); setProductoEditando(null); }} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold">✖️</button>
+            <button 
+              onClick={() => { setShowModalEditar(false); setProductoEditando(null); }} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-lg font-bold"
+            >
+              ✖️
+            </button>
 
             <h3 className="text-2xl font-black text-[#1b4332] uppercase tracking-tighter mb-5">Editar Flor</h3>
             
@@ -756,40 +725,40 @@ export default function App() {
                 <label className="block mb-1 uppercase tracking-wider">Nombre del Producto</label>
                 <input 
                   type="text" 
+                  required
                   value={productoEditando.nombre} 
                   onChange={(e) => setProductoEditando({...productoEditando, nombre: e.target.value})}
-                  required 
                   className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Stock</label>
+                  <label className="block mb-1 uppercase tracking-wider">Stock Disponible</label>
                   <input 
                     type="number" 
+                    required
+                    min="0"
                     value={productoEditando.stock} 
                     onChange={(e) => setProductoEditando({...productoEditando, stock: e.target.value})}
-                    required 
-                    min="0" 
                     className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 uppercase tracking-wider">Precio ($)</label>
+                  <label className="block mb-1 uppercase tracking-wider">Precio Unitario (COP)</label>
                   <input 
                     type="number" 
+                    required
+                    min="0"
                     value={productoEditando.precio} 
                     onChange={(e) => setProductoEditando({...productoEditando, precio: e.target.value})}
-                    required 
-                    min="0" 
                     className="w-full p-3 rounded-xl border border-gray-200 outline-none text-gray-700 font-semibold focus:ring-2 ring-emerald-200" 
                   />
                 </div>
               </div>
 
-              <button className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
-                Actualizar Registro
+              <button type="submit" className="w-full bg-[#1b4332] text-white p-4 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#2d6a4f] mt-4">
+                Actualizar Cambios
               </button>
             </form>
           </div>

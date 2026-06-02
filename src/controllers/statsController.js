@@ -1,50 +1,80 @@
 const XLSX = require('xlsx');
-const db = require('../config/db'); // ⚠️ Asegúrate de que esta sea la ruta real a tu conexión de base de datos (MySQL)
+const db = require('../config/db'); // Tu archivo de conexión a MySQL
 
 exports.stressTestExcel = async (req, res) => {
   try {
-    // 1. Verificar si llegó el archivo
     if (!req.file) {
       return res.status(400).json({ mensaje: 'No se subió ningún archivo Excel.' });
     }
 
-    // 2. Leer el archivo desde la memoria
+    // 1. Leer el Excel desde la memoria
     const libro = XLSX.read(req.file.buffer, { type: 'buffer' });
     const nombreHoja = libro.SheetNames[0];
     const hoja = libro.Sheets[nombreHoja];
-    
-    // Convertir las filas del Excel a un Array de objetos de JavaScript
     const filas = XLSX.utils.sheet_to_json(hoja); 
 
-    console.log(`Procesando ${filas.length} registros desde el Excel...`);
+    console.log(`Iniciando inyección masiva de ${filas.length} registros...`);
 
-    // 3. Insertar los registros en la base de datos de MySQL uno por uno o en lote
-    // ⚠️ Modifica los nombres de las columnas ('nombre', 'precio', etc.) según cómo se llamen exactamente en tu tabla de MySQL
+    // 2. Mapeo de Categorías de Texto a IDs numéricos reales de tu MySQL
+    // Cruzado exactamente con los datos de tu imagen de MySQL Workbench
+    const mapeoCategorias = {
+      'flores ornamentales': 11,
+      'Dia enamorados': 12,
+      'Flores de bodas': 18
+    };
+
+    // 3. Recorrer e insertar las filas
     for (const fila of filas) {
+      
+      // Obtener el ID numérico de la categoría. Si por alguna razón no coincide, le ponemos la 11 por defecto
+      const textoCategoria = fila['Categoría'];
+      const idCategoria = mapeoCategorias[textoCategoria] || 11;
+
+      // Extraer un color básico del nombre generado en el Excel (Ej: "Ramo de Rosas Rojo(a) Premium" -> extrae "Rojo(a)")
+      // Si no encuentra coincidencia en el nombre, le asignamos "Variado"
+      let colorDetectado = 'Variado';
+      const nombreProducto = fila['Nombre'] || '';
+      if (nombreProducto.includes('Rojo')) colorDetectado = 'Rojo';
+      else if (nombreProducto.includes('Blanco')) colorDetectado = 'Blanco';
+      else if (nombreProducto.includes('Amarillo')) colorDetectado = 'Amarillo';
+      else if (nombreProducto.includes('Rosado')) colorDetectado = 'Rosado';
+      else if (nombreProducto.includes('Azul')) colorDetectado = 'Azul';
+      else if (nombreProducto.includes('Morado')) colorDetectado = 'Morado';
+
+      // Estructurar la consulta con los campos EXACTOS de tu base de datos
       const query = `
-        INSERT INTO flores (nombre, categoria, stock, precio, fecha_ingreso) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO flores (nombre, color, precio, stock, id_categoria, imagen_url) 
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
       
       const valores = [
-        fila['Nombre'],
-        fila['Categoría'],
-        fila['Stock'],
-        fila['Precio'],
-        fila['Fecha de Ingreso']
+        nombreProducto,
+        colorDetectado,
+        Number(fila['Precio']) || 0,
+        Number(fila['Stock']) || 0,
+        idCategoria,
+        'https://images.unsplash.com/photo-1526047932273-341f2a7631f9' // URL de imagen genérica por si es obligatoria
       ];
 
-      // Ejecutar la consulta en tu base de datos
-      await db.query(query, valores); 
+      // Ejecutar de forma compatible con tu configuración de Base de Datos
+      if (db.execute) {
+        await db.execute(query, valores);
+      } else if (db.query) {
+        await db.query(query, valores);
+      } else {
+        await db.sequelize.query(query, { replacements: valores });
+      }
     }
 
-    // 4. Responder al Frontend que todo salió perfecto
-    res.json({ 
-      mensaje: `¡Prueba de estrés exitosa! Se inyectaron correctamente ${filas.length} flores en la base de datos.` 
+    return res.json({ 
+      mensaje: `¡Prueba de estrés completada con éxito! Se inyectaron ${filas.length} flores asociadas a sus categorías numéricas.` 
     });
 
   } catch (error) {
-    console.error('Error en la prueba de estrés:', error);
-    res.status(500).json({ mensaje: 'Error interno del servidor al procesar el Excel.', error: error.message });
+    console.error('🔴 Error en el backend:', error);
+    return res.status(500).json({ 
+      mensaje: 'Error interno en el servidor al procesar las filas.', 
+      detalles: error.message 
+    });
   }
 };

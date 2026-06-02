@@ -40,6 +40,9 @@ export default function App() {
   const [showModalEditar, setShowModalEditar] = useState(false);
   const [productoEditando, setProductoEditando] = useState(null);
 
+  // 🌟 ESTADO ADICIONAL PARA EL BOTÓN DE EXCEL
+  const [cargandoExcel, setCargandoExcel] = useState(false);
+
   // 🌟 Cargar categorías directamente desde la Base de Datos
   const fetchCategoriasBD = useCallback(async () => {
     try {
@@ -77,7 +80,6 @@ export default function App() {
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
-      // Agregamos un timestamp para forzar a Render a darnos datos frescos sin caché de navegador
       const resStats = await fetch(`${API_BASE_URL}/stats?t=${new Date().getTime()}`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
@@ -141,7 +143,6 @@ export default function App() {
   };
 
   const handlebgAgregarProducto = async (e) => {
-    // Alias para compatibilidad de funciones
     handleAgregarProducto(e);
   };
 
@@ -349,13 +350,53 @@ export default function App() {
     return alertas;
   };
 
-  // FILTRADO INTELIGENTE
+  // 🌟 FUNCIÓN MANEJADORA PARA ENVIAR EL EXCEL AL BACKEND (PRUEBA DE ESTRÉS)
+  const handleImportarExcel = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!window.confirm("¿Deseas procesar este archivo de Excel para inyectar los registros de prueba?")) {
+      e.target.value = ''; // Limpiar input
+      return;
+    }
+
+    setCargandoExcel(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/stats/stress-test`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🚀 ¡Inyección exitosa! ${data.mensaje || 'Registros procesados correctamente.'}`);
+        fetchData(); // Recargar datos de la interfaz
+      } else {
+        alert(`Error en el servidor: ${data.mensaje || 'No se pudo procesar el archivo.'}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error de conexión al enviar el archivo Excel al backend de Render.");
+    } finally {
+      setCargandoExcel(false);
+      e.target.value = ''; // Limpiar input
+    }
+  };
+
+  // --- FILTRADO DE PRODUCTOS EN INTERFAZ ---
   const productosFiltrados = productos.filter(p => {
-    const pCat = p.nombre_categoria || p.categoria || p.category || '';
-    const cumpleCategoria = filtroCategoria === 'Todas' || pCat.trim().toLowerCase() === filtroCategoria.toLowerCase();
-    const cumpleBusqueda = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
-    return cumpleCategoria && cumpleBusqueda;
+    const matchesSearch = p.nombre?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (filtroCategoria === 'Todas') return matchesSearch;
+    const catProd = p.nombre_categoria || p.categoria || p.category || '';
+    return catProd.toLowerCase() === filtroCategoria.toLowerCase() && matchesSearch;
   });
+
 
   // --- RENDERIZADO CONDICIONAL DE LOGIN ---
   if (!user) {
@@ -423,17 +464,10 @@ export default function App() {
           <div onClick={() => { setActiveTab('categorias'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'categorias' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📂</span> <span>Categorías</span>
           </div>
-          {/* 🌟 NUEVA PESTAÑA DE PROVEEDORES */}
-  <div onClick={() => { setActiveTab('proveedores'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'proveedores' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
-    <span className="text-lg">🤝</span> <span>Proveedores</span>
-  </div>
-
+          <div onClick={() => { setActiveTab('proveedores'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'proveedores' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+            <span className="text-lg">🤝</span> <span>Proveedores</span>
+          </div>
         </nav>
-        
-
-
-
-
         
         <div className="p-6 border-t border-white/10">
           <div className="flex items-center gap-3 mb-6 p-2">
@@ -498,7 +532,6 @@ export default function App() {
                     <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-2">
                       <div>
                         <p className="text-[9px] font-black text-gray-300 uppercase">#{String(p.id || p._id).substring(0,5)}</p>
-                        {/* 🌟 CORREGIDO: Muestra 'nombre' o 'cliente' dinámico del backend sin congelarse */}
                         <p className="text-sm font-black text-gray-700">{p.nombre || p.cliente}</p>
                       </div>
                       <p className="text-sm font-black text-emerald-600">{formatCOP(p.total)}</p>
@@ -536,7 +569,7 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <input 
                   type="text" 
                   placeholder="Buscar flor o producto..." 
@@ -544,6 +577,19 @@ export default function App() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-64 shadow-xs"
                 />
+
+                {/* 🌟 BOTÓN PARA IMPORTAR ARCHIVO EXCEL */}
+                <label className={`cursor-pointer font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0 text-white transition-all ${cargandoExcel ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                  {cargandoExcel ? '🚀 Inyectando...' : '📤 Importar Excel'}
+                  <input 
+                    type="file" 
+                    accept=".xlsx, .xls" 
+                    onChange={handleImportarExcel} 
+                    disabled={cargandoExcel}
+                    className="hidden" 
+                  />
+                </label>
+
                 <button onClick={() => setShowModal(true)} className="bg-[#f06292] hover:bg-[#ec407a] text-white font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0">
                   + Añadir Producto
                 </button>
@@ -639,7 +685,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 🌟 SECCIÓN COMPONENTES: Inyección de la función re-fetch para limpiar la vista */}
         {activeTab === 'personal' && <Personal user={user} API_BASE_URL={API_BASE_URL} onPersonalCambiado={fetchData} />}
         {activeTab === 'pedidos' && <Pedidos user={user} API_BASE_URL={API_BASE_URL} onPedidoCreado={fetchData} />}
         {activeTab === 'categorias' && <Categorias user={user} API_BASE_URL={API_BASE_URL} onCategoriasCambiadas={fetchCategoriasBD} />}

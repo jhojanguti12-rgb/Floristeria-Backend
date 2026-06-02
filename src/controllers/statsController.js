@@ -78,3 +78,46 @@ exports.stressTestExcel = async (req, res) => {
     });
   }
 };
+// Función para obtener el resumen de estadísticas generales
+exports.obtenerEstadisticasGenerales = async (req, res) => {
+  try {
+    // 1. Sumar todo el stock actual en la tabla de flores
+    const queryStock = 'SELECT SUM(stock) AS totalStock FROM flores';
+    
+    // 2. Contar el número de pedidos en la tabla pedidos
+    const queryPedidos = 'SELECT COUNT(*) AS totalPedidos FROM pedidos';
+    
+    // 3. Sumar el total de dinero recaudado en la tabla pagos (o pedidos si manejas total ahí)
+    const queryVentas = 'SELECT SUM(monto) AS totalVentas FROM pagos'; 
+
+    // Ejecutar las consultas de forma segura (utilizando el método que use tu base de datos)
+    let stockResult, pedidosResult, ventasResult;
+
+    if (db.execute) {
+      [stockResult] = await db.execute(queryStock);
+      [pedidosResult] = await db.execute(queryPedidos);
+      [ventasResult] = await db.execute(queryVentas);
+    } else {
+      [stockResult] = await db.query(queryStock);
+      [pedidosResult] = await db.query(queryPedidos);
+      [ventasResult] = await db.query(queryVentas);
+    }
+
+    // Extraer los valores numéricos o poner 0 si es NULL
+    const totalStock = stockResult[0]?.totalStock || 0;
+    const totalPedidos = pedidosResult[0]?.totalPedidos || 0;
+    const totalVentas = ventasResult[0]?.totalVentas || 0;
+
+    // Responder al frontend con el formato exacto que espera recibir
+    return res.json({
+      pedidos: totalPedidos,
+      ventas: totalVentas,
+      stock: totalStock,
+      personal: 0 // Puedes dejarlo fijo o hacer una consulta a la tabla empleados si lo deseas
+    });
+
+  } catch (error) {
+    console.error('🔴 Error al obtener estadísticas:', error);
+    return res.status(500).json({ mensaje: 'Error al compilar el resumen del panel.' });
+  }
+};

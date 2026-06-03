@@ -43,6 +43,10 @@ export default function App() {
   // 🌟 ESTADO ADICIONAL PARA EL BOTÓN DE EXCEL
   const [cargandoExcel, setCargandoExcel] = useState(false);
 
+  // 🔥 NUEVOS ESTADOS PARA LA PAGINACIÓN DEL INVENTARIO (OPCIÓN 1 - OPTIMIZACIÓN)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [productosPorPagina] = useState(12); // Bloques ideales para la cuadrícula (grid de 3 columnas)
+
   // 🌟 Cargar categorías directamente desde la Base de Datos
   const fetchCategoriasBD = useCallback(async () => {
     try {
@@ -117,6 +121,7 @@ export default function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    loading = true; // Se mantiene por compatibilidad
     setLoading(true);
     const email = e.target.elements.email.value;
     const password = e.target.elements.password.value;
@@ -140,10 +145,6 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlebgAgregarProducto = async (e) => {
-    handleAgregarProducto(e);
   };
 
   const handleAgregarProducto = async (e) => {
@@ -180,6 +181,7 @@ export default function App() {
         fetchData();
         fetchCategoriasBD(); 
         setShowModal(false);
+        setPaginaActual(1); // Mover a la primera página para ver el nuevo producto
       } else {
         const errData = await res.json();
         alert(errData.mensaje || "Error al guardar el producto");
@@ -261,6 +263,7 @@ export default function App() {
         );
         
         setShowModalEditar(false);
+        productoEditando = null; // Reajuste por compatibilidad
         setProductoEditando(null);
         alert('¡Flor actualizada correctamente en la base de datos!');
         fetchData();
@@ -271,63 +274,6 @@ export default function App() {
     } catch (error) {
       console.error("Error de red al intentar actualizar:", error);
       alert('Error de conexión con el servidor de Render.');
-    }
-  };
-
-  const handleCrearEmpleado = async (e) => {
-    e.preventDefault();
-    const nombre = e.target.elements.emp_nombre.value;
-    const email = e.target.elements.emp_email.value;
-    const password = e.target.elements.emp_password.value;
-    const rol = e.target.elements.emp_rol.value;
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/crear-personal`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nombre, email, password, rol })
-      });
-
-      const respuesta = await res.json();
-
-      if (res.ok) {
-        alert(respuesta.mensaje || "✅ Empleado registrado correctamente.");
-        setShowModalEmpleado(false);
-        e.target.reset();
-        fetchEmpleados();
-        fetchData();
-      } else {
-        alert(respuesta.mensaje || "Error al registrar empleado.");
-      }
-    } catch (error) {
-      alert("Error de red al intentar registrar al empleado.");
-    }
-  };
-
-  const handleEliminarEmpleado = async (idEmpleado) => {
-    if (window.confirm("¿Estás seguro de que deseas dar de baja a este empleado?")) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/usuarios/personal/${idEmpleado}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (res.ok) {
-          alert("✅ Empleado eliminado del sistema.");
-          fetchEmpleados();
-          fetchData();
-        } else {
-          alert("No se pudo eliminar al empleado.");
-        }
-      } catch (error) {
-        console.error("Error al eliminar personal:", error);
-      }
     }
   };
 
@@ -350,13 +296,12 @@ export default function App() {
     return alertas;
   };
 
-  // 🌟 FUNCIÓN MANEJADORA PARA ENVIAR EL EXCEL AL BACKEND (PRUEBA DE ESTRÉS)
   const handleImportarExcel = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!window.confirm("¿Deseas procesar este archivo de Excel para inyectar los registros de prueba?")) {
-      e.target.value = ''; // Limpiar input
+      e.target.value = ''; 
       return;
     }
 
@@ -376,7 +321,8 @@ export default function App() {
       const data = await res.json();
       if (res.ok) {
         alert(`🚀 ¡Inyección exitosa! ${data.mensaje || 'Registros procesados correctamente.'}`);
-        fetchData(); // Recargar datos de la interfaz
+        fetchData(); 
+        setPaginaActual(1); // Resetear a la primera página tras la inyección masiva
       } else {
         alert(`Error en el servidor: ${data.mensaje || 'No se pudo procesar el archivo.'}`);
       }
@@ -385,7 +331,7 @@ export default function App() {
       alert("Error de conexión al enviar el archivo Excel al backend de Render.");
     } finally {
       setCargandoExcel(false);
-      e.target.value = ''; // Limpiar input
+      e.target.value = ''; 
     }
   };
 
@@ -397,6 +343,18 @@ export default function App() {
     return catProd.toLowerCase() === filtroCategoria.toLowerCase() && matchesSearch;
   });
 
+  // --- 🔥 LÓGICA AGREGADA DE PAGINACIÓN COMPLEMENTARIA ---
+  const indiceUltimoProducto = paginaActual * productosPorPagina;
+  const indicePrimerProducto = indiceUltimoProducto - productosPorPagina;
+  // Este es el sub-arreglo de máximo 12 flores que se pintará en la pantalla actual
+  const productosPaginaActual = productosFiltrados.slice(indicePrimerProducto, indiceUltimoProducto);
+  const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
+
+  const cambiarPagina = (numeroPagina) => {
+    if (numeroPagina >= 1 && numeroPagina <= totalPaginas) {
+      setPaginaActual(numeroPagina);
+    }
+  };
 
   // --- RENDERIZADO CONDICIONAL DE LOGIN ---
   if (!user) {
@@ -452,7 +410,7 @@ export default function App() {
           <div onClick={() => { setActiveTab('inicio'); setMenuOpen(false); fetchData(); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inicio' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">🏠</span> <span>Inicio</span>
           </div>
-          <div onClick={() => { setActiveTab('inventario'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inventario' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
+          <div onClick={() => { setActiveTab('inventario'); setMenuOpen(false); setPaginaActual(1); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'inventario' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
             <span className="text-lg">📦</span> <span>Inventario</span>
           </div>
           <div onClick={() => { setActiveTab('personal'); setMenuOpen(false); }} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activeTab === 'personal' ? 'bg-white/10 border border-white/10 font-bold' : 'opacity-60 hover:bg-white/5'}`}>
@@ -551,16 +509,16 @@ export default function App() {
                 
                 <div className="flex flex-wrap gap-2 mt-3">
                   <button 
-                    onClick={() => setFiltroCategoria('Todas')}
+                    onClick={() => { setFiltroCategoria('Todas'); setPaginaActual(1); }}
                     className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria === 'Todas' ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                   >
-                    Todas las Flores
+                    Todas las Flores ({productosFiltrados.length})
                   </button>
                   
                   {categoriasBD.map((cat) => (
                     <button 
                       key={cat.id} 
-                      onClick={() => setFiltroCategoria(cat.nombre)}
+                      onClick={() => { setFiltroCategoria(cat.nombre); setPaginaActual(1); }}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria.toLowerCase() === cat.nombre.toLowerCase() ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                     >
                       {cat.nombre}
@@ -574,7 +532,7 @@ export default function App() {
                   type="text" 
                   placeholder="Buscar flor o producto..." 
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPaginaActual(1); }}
                   className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-64 shadow-xs"
                 />
 
@@ -596,68 +554,109 @@ export default function App() {
               </div>
             </div>
 
+            {/* CONTENEDOR GRID DE PRODUCTOS EN BLOQUES DE 12 */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
-              <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {productosFiltrados.length > 0 ? productosFiltrados.map((prod) => {
-                  let badgeColor = 'bg-emerald-500';
-                  let badgeText = 'Disponible';
-                  if (prod.stock === 0) { badgeColor = 'bg-gray-400'; badgeText = 'Agotado'; }
-                  else if (prod.stock <= 5) { badgeColor = 'bg-orange-500'; badgeText = 'Stock Bajo'; }
+              <div className="lg:col-span-3 flex flex-col justify-between">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+                  {productosPaginaActual.length > 0 ? productosPaginaActual.map((prod) => {
+                    let badgeColor = 'bg-emerald-500';
+                    let badgeText = 'Disponible';
+                    
+                    // LÓGICA DE ALERTA DE STOCK EN FRONTEND (VINCULADO AL RF-04)
+                    if (prod.stock === 0) { 
+                      badgeColor = 'bg-gray-400'; 
+                      badgeText = 'Agotado'; 
+                    } else if (prod.stock < 20) { 
+                      badgeColor = 'bg-red-500 animate-pulse'; 
+                      badgeText = '⚠️ Stock Crítico'; 
+                    } else if (prod.stock <= 50) { 
+                      badgeColor = 'bg-orange-500'; 
+                      badgeText = 'Stock Bajo'; 
+                    }
 
-                  const prodId = prod.id || prod._id;
-                  const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
-                  
-                  const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
-                  const imagenSrc = urlFotoReal || 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600';
+                    const prodId = prod.id || prod._id;
+                    const displayCat = prod.nombre_categoria || prod.categoria || prod.category || 'General';
+                    
+                    const urlFotoReal = prod.imagen_url || prod.imagen || prod.foto;
+                    const imagenSrc = urlFotoReal || 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600';
 
-                  return (
-                    <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-                      <div className="relative h-44 bg-gray-50">
-                        <img 
-                          src={imagenSrc} 
-                          alt={prod.nombre} 
-                          className="w-full h-full object-cover"
-                          onError={(e) => { 
-                            e.target.src = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; 
-                          }} 
-                        />
-                        <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
-                          {badgeText}
-                        </span>
-                      </div>
-                      
-                      <div className="p-5 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h4 className="font-black text-gray-800 text-lg leading-tight mb-1">{prod.nombre}</h4>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{displayCat}</p>
-                          <p className="text-xs text-gray-500 font-bold mt-2">Stock: <span className="text-gray-700 font-black">{prod.stock} und</span></p>
+                    return (
+                      <div key={prodId} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                        <div className="relative h-44 bg-gray-50">
+                          <img 
+                            src={imagenSrc} 
+                            alt={prod.nombre} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => { 
+                              e.target.src = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=600'; 
+                            }} 
+                          />
+                          <span className={`absolute top-3 right-3 text-[10px] text-white font-black uppercase px-3 py-1 rounded-full ${badgeColor}`}>
+                            {badgeText}
+                          </span>
                         </div>
                         
-                        <div className="flex gap-3 mt-4">
-                          <button 
-                            onClick={() => {
-                              setProductoEditando(prod);
-                              setShowModalEditar(true);
-                            }} 
-                            className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-all flex items-center gap-1"
-                          >
-                            ✏️ Editar
-                          </button>
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="font-black text-gray-800 text-lg leading-tight mb-1">{prod.nombre}</h4>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{displayCat}</p>
+                            <p className="text-xs font-bold mt-2 text-gray-500">
+                              Stock: <span className={`font-black ${prod.stock < 20 ? 'text-red-500 font-extrabold' : 'text-gray-700'}`}>{prod.stock} und</span>
+                            </p>
+                            <p className="text-sm font-black text-emerald-600 mt-1">{formatCOP(prod.precio)}</p>
+                          </div>
+                          
+                          <div className="flex gap-3 mt-4">
+                            <button 
+                              onClick={() => {
+                                setProductoEditando(prod);
+                                setShowModalEditar(true);
+                              }} 
+                              className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-all flex items-center gap-1"
+                            >
+                              ✏️ Editar
+                            </button>
 
-                          <button 
-                            onClick={() => handleEliminarProducto(prodId)} 
-                            className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all flex items-center gap-1"
-                          >
-                            🗑️ Eliminar
-                          </button>
+                            <button 
+                              onClick={() => handleEliminarProducto(prodId)} 
+                              className="text-xs font-bold text-gray-400 hover:text-red-500 transition-all flex items-center gap-1"
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
                         </div>
                       </div>
+                    );
+                  }) : (
+                    <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
+                      <p className="text-gray-400 font-bold text-sm">No hay productos que coincidan con los criterios establecidos.</p>
                     </div>
-                  );
-                }) : (
-                  <div className="col-span-full bg-white p-12 rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-400 font-bold text-sm">No hay productos en esta categoría o tu inventario está vacío.</p>
+                  )}
+                </div>
+
+                {/* 🎛️ CONTROLES VISUALES DE PAGINACIÓN (ESTILO ESMERALDA) */}
+                {totalPaginas > 1 && (
+                  <div className="flex justify-center items-center gap-2 py-4 bg-white rounded-full border border-gray-100 shadow-xs px-6">
+                    <button 
+                      onClick={() => cambiarPagina(paginaActual - 1)} 
+                      disabled={paginaActual === 1}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-[#1b4332] text-xs font-black rounded-full disabled:opacity-40 transition-all"
+                    >
+                      ⬅️ Anterior
+                    </button>
+                    
+                    <span className="text-xs font-bold text-gray-500 px-2">
+                      Página <span className="text-[#1b4332] font-black">{paginaActual}</span> de {totalPaginas}
+                    </span>
+
+                    <button 
+                      onClick={() => cambiarPagina(paginaActual + 1)} 
+                      disabled={paginaActual === totalPaginas}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-[#1b4332] text-xs font-black rounded-full disabled:opacity-40 transition-all"
+                    >
+                      Siguiente ➡️
+                    </button>
                   </div>
                 )}
               </div>

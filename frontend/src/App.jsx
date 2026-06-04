@@ -19,7 +19,7 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
 }).format(Number(val) || 0);
 
 export default function App() {
-  cconst [user, setUser] = useState(() => 
+  const [user, setUser] = useState(() => 
   JSON.parse(window.sessionStorage.getItem('user')) || 
   JSON.parse(window.localStorage.getItem('user')) || 
   null

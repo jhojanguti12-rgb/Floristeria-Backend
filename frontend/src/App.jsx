@@ -19,7 +19,11 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
 }).format(Number(val) || 0);
 
 export default function App() {
-  const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
+  cconst [user, setUser] = useState(() => 
+  JSON.parse(window.sessionStorage.getItem('user')) || 
+  JSON.parse(window.localStorage.getItem('user')) || 
+  null
+);
   const [activeTab, setActiveTab] = useState('inicio'); 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showModal, setShowModal] = useState(false); 

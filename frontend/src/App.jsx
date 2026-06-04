@@ -198,7 +198,7 @@ export default function App() {
     }
   };
 
-  const handleActualizarProducto = async (e) => {
+const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
@@ -224,34 +224,38 @@ export default function App() {
         body: JSON.stringify(datosEnviar),
       });
 
-    if (res.ok) {
-      setProductos(prevProductos =>
-        prevProductos.map(p => 
-          String(p.id || p._id) === String(idTarget) 
-            ? { 
-                ...p, 
-                nombre: productoEditando.nombre,
-                stock: Number(productoEditando.stock),
-                precio: Number(productoEditando.precio)
-              } 
-            : p
-        )
-      );
-      
-      setShowModalEditar(false);
-      setProductoEditando(null);
-      alert('¡Flor actualizada correctamente en la base de datos!');
-      fetchData();
-    } else {
-      const errorData = await res.json().catch(() => ({}));
-      alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
-    }
+      if (res.ok) {
+        setProductos(prevProductos =>
+          prevProductos.map(p => 
+            String(p.id || p._id) === String(idTarget) 
+              ? { 
+                  ...p, 
+                  nombre: productoEditando.nombre,
+                  stock: Number(productoEditando.stock),
+                  precio: Number(productoEditando.precio)
+                } 
+              : p
+          )
+        );
+        
+        setShowModalEditar(false);
+        setProductoEditando(null);
+        alert('¡Flor actualizada correctamente en la base de datos!');
+        fetchData();
+      } else {
+        // Corrección del bloque de error para evitar mutaciones accidentales
+        try {
+          const errorData = await res.json();
+          alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica el backend.'}`);
+        } catch {
+          alert('Error al procesar la respuesta del servidor.');
+        }
+      }
     } catch (error) {
       console.error("Error de red al intentar actualizar:", error);
       alert('Error de conexión con el servidor de Render.');
     }
   };
-
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();

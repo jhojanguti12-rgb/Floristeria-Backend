@@ -119,34 +119,45 @@ export default function App() {
     }
   }, [user, fetchData, fetchEmpleados, fetchCategoriasBD]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    loading = true; // Se mantiene por compatibilidad
-    setLoading(true);
-    const email = e.target.elements.email.value;
-    const password = e.target.elements.password.value;
+const handleLogin = async (e) => {
+  e.preventDefault();
+  
+  const email = e.target.elements.email.value.trim();
+  const password = e.target.elements.password.value;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const d = await res.json();
-      if (res.ok && d.token) {
-        const u = { nombre: d.nombre || 'Administrador', token: d.token };
-        window.sessionStorage.setItem('user', JSON.stringify(u));
-        setUser(u);
-      } else {
-        alert(d.mensaje || "Email o contraseña incorrectos");
-      }
-    } catch (err) {
-      alert("No se pudo conectar con el servidor.");
-    } finally {
-      setLoading(false);
+  // Optimización 1: Validación básica en cliente para ahorrar peticiones innecesarias al servidor
+  if (!email || !password) {
+    alert("Por favor, completa todos los campos.");
+    return;
+  }
+
+  // Activamos el estado de carga correctamente sin mutar variables externas
+  setLoading(true);
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const d = await res.json();
+    
+    if (res.ok && d.token) {
+      const u = { nombre: d.nombre || 'Administrador', token: d.token };
+      window.sessionStorage.setItem('user', JSON.stringify(u));
+      setUser(u);
+    } else {
+      alert(d.mensaje || "Email o contraseña incorrectos");
     }
-  };
-
+  } catch (err) {
+    console.error("Error en el login:", err);
+    alert("No se pudo conectar con el servidor de la floristería.");
+  } finally {
+    // Garantizamos que el botón vuelva a habilitarse pase lo que pase
+    setLoading(false);
+  }
+};
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     
@@ -222,61 +233,59 @@ export default function App() {
     }
   };
 
-  const handleActualizarProducto = async (e) => {
-    e.preventDefault();
-    if (!productoEditando) return;
+const handleActualizarProducto = async (e) => {
+  e.preventDefault();
+  if (!productoEditando) return;
 
-    const idTarget = productoEditando.id || productoEditando._id;
-    if (!idTarget) {
-      alert("Error: El producto no tiene un identificador válido.");
-      return;
-    }
+  const idTarget = productoEditando.id || productoEditando._id;
+  if (!idTarget) {
+    alert("Error: El producto no tiene un identificador válido.");
+    return;
+  }
 
-    const datosEnviar = {
-      nombre: productoEditando.nombre,
-      stock: Number(productoEditando.stock),
-      precio: Number(productoEditando.precio)
-    };
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(datosEnviar),
-      });
-
-      if (res.ok) {
-        setProductos(prevProductos =>
-          prevProductos.map(p => 
-            String(p.id || p._id) === String(idTarget) 
-              ? { 
-                  ...p, 
-                  nombre: productoEditando.nombre,
-                  stock: Number(productoEditando.stock),
-                  precio: Number(productoEditando.precio)
-                } 
-              : p
-          )
-        );
-        
-        setShowModalEditar(false);
-        productoEditando = null; // Reajuste por compatibilidad
-        setProductoEditando(null);
-        alert('¡Flor actualizada correctamente en la base de datos!');
-        fetchData();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
-      }
-    } catch (error) {
-      console.error("Error de red al intentar actualizar:", error);
-      alert('Error de conexión con el servidor de Render.');
-    }
+  const datosEnviar = {
+    nombre: productoEditando.nombre,
+    stock: Number(productoEditando.stock),
+    precio: Number(productoEditando.precio)
   };
 
+  try {
+    const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${user.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(datosEnviar),
+    });
+
+    if (res.ok) {
+      setProductos(prevProductos =>
+        prevProductos.map(p => 
+          String(p.id || p._id) === String(idTarget) 
+            ? { 
+                ...p, 
+                nombre: productoEditando.nombre,
+                stock: Number(productoEditando.stock),
+                precio: Number(productoEditando.precio)
+              } 
+            : p
+        )
+      );
+      
+      setShowModalEditar(false);
+      setProductoEditando(null); // ✅ Corregido: Usamos exclusivamente el set del estado de React
+      alert('¡Flor actualizada correctamente en la base de datos!');
+      fetchData();
+    } else {
+      const errorData = await res.json().catch(() => ({}));
+      alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
+    }
+  } catch (error) {
+    console.error("Error de red al intentar actualizar:", error);
+    alert('Error de conexión con el servidor de Render.');
+  }
+};
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();

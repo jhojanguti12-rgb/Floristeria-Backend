@@ -8,6 +8,7 @@ import Personal from './components/Personal';
 import Pedidos from './components/Pedidos';
 import Categorias from './components/categorias';
 import Proveedores from './components/proveedores'; 
+import Login from './components/Login'; // 👈 Importación del nuevo componente
 
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
@@ -19,7 +20,6 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
 
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(window.sessionStorage.getItem('user')) || null);
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('inicio'); 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showModal, setShowModal] = useState(false); 
@@ -43,9 +43,9 @@ export default function App() {
   // 🌟 ESTADO ADICIONAL PARA EL BOTÓN DE EXCEL
   const [cargandoExcel, setCargandoExcel] = useState(false);
 
-  // 🔥 NUEVOS ESTADOS PARA LA PAGINACIÓN DEL INVENTARIO (OPCIÓN 1 - OPTIMIZACIÓN)
+  // 🔥 NUEVOS ESTADOS PARA LA PAGINACIÓN DEL INVENTARIO
   const [paginaActual, setPaginaActual] = useState(1);
-  const [productosPorPagina] = useState(12); // Bloques ideales para la cuadrícula (grid de 3 columnas)
+  const [productosPorPagina] = useState(12);
 
   // 🌟 Cargar categorías directamente desde la Base de Datos
   const fetchCategoriasBD = useCallback(async () => {
@@ -119,45 +119,6 @@ export default function App() {
     }
   }, [user, fetchData, fetchEmpleados, fetchCategoriasBD]);
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  
-  const email = e.target.elements.email.value.trim();
-  const password = e.target.elements.password.value;
-
-  // Optimización 1: Validación básica en cliente para ahorrar peticiones innecesarias al servidor
-  if (!email || !password) {
-    alert("Por favor, completa todos los campos.");
-    return;
-  }
-
-  // Activamos el estado de carga correctamente sin mutar variables externas
-  setLoading(true);
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/usuarios/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    const d = await res.json();
-    
-    if (res.ok && d.token) {
-      const u = { nombre: d.nombre || 'Administrador', token: d.token };
-      window.sessionStorage.setItem('user', JSON.stringify(u));
-      setUser(u);
-    } else {
-      alert(d.mensaje || "Email o contraseña incorrectos");
-    }
-  } catch (err) {
-    console.error("Error en el login:", err);
-    alert("No se pudo conectar con el servidor de la floristería.");
-  } finally {
-    // Garantizamos que el botón vuelva a habilitarse pase lo que pase
-    setLoading(false);
-  }
-};
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     
@@ -192,7 +153,7 @@ const handleLogin = async (e) => {
         fetchData();
         fetchCategoriasBD(); 
         setShowModal(false);
-        setPaginaActual(1); // Mover a la primera página para ver el nuevo producto
+        setPaginaActual(1);
       } else {
         const errData = await res.json();
         alert(errData.mensaje || "Error al guardar el producto");
@@ -233,31 +194,31 @@ const handleLogin = async (e) => {
     }
   };
 
-const handleActualizarProducto = async (e) => {
-  e.preventDefault();
-  if (!productoEditando) return;
+  const handleActualizarProducto = async (e) => {
+    e.preventDefault();
+    if (!productoEditando) return;
 
-  const idTarget = productoEditando.id || productoEditando._id;
-  if (!idTarget) {
-    alert("Error: El producto no tiene un identificador válido.");
-    return;
-  }
+    const idTarget = productoEditando.id || productoEditando._id;
+    if (!idTarget) {
+      alert("Error: El producto no tiene un identificador válido.");
+      return;
+    }
 
-  const datosEnviar = {
-    nombre: productoEditando.nombre,
-    stock: Number(productoEditando.stock),
-    precio: Number(productoEditando.precio)
-  };
+    const datosEnviar = {
+      nombre: productoEditando.nombre,
+      stock: Number(productoEditando.stock),
+      precio: Number(productoEditando.precio)
+    };
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(datosEnviar),
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/productos/${idTarget}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(datosEnviar),
+      });
 
     if (res.ok) {
       setProductos(prevProductos =>
@@ -274,18 +235,19 @@ const handleActualizarProducto = async (e) => {
       );
       
       setShowModalEditar(false);
-      setProductoEditando(null); // ✅ Corregido: Usamos exclusivamente el set del estado de React
+      setProductoEditando(null);
       alert('¡Flor actualizada correctamente en la base de datos!');
       fetchData();
     } else {
       const errorData = await res.json().catch(() => ({}));
       alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica los campos en el backend.'}`);
     }
-  } catch (error) {
-    console.error("Error de red al intentar actualizar:", error);
-    alert('Error de conexión con el servidor de Render.');
-  }
-};
+    } catch (error) {
+      console.error("Error de red al intentar actualizar:", error);
+      alert('Error de conexión con el servidor de Render.');
+    }
+  };
+
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
@@ -331,7 +293,7 @@ const handleActualizarProducto = async (e) => {
       if (res.ok) {
         alert(`🚀 ¡Inyección exitosa! ${data.mensaje || 'Registros procesados correctamente.'}`);
         fetchData(); 
-        setPaginaActual(1); // Resetear a la primera página tras la inyección masiva
+        setPaginaActual(1);
       } else {
         alert(`Error en el servidor: ${data.mensaje || 'No se pudo procesar el archivo.'}`);
       }
@@ -352,10 +314,9 @@ const handleActualizarProducto = async (e) => {
     return catProd.toLowerCase() === filtroCategoria.toLowerCase() && matchesSearch;
   });
 
-  // --- 🔥 LÓGICA AGREGADA DE PAGINACIÓN COMPLEMENTARIA ---
+  // --- LÓGICA DE PAGINACIÓN COMPLEMENTARIA ---
   const indiceUltimoProducto = paginaActual * productosPorPagina;
   const indicePrimerProducto = indiceUltimoProducto - productosPorPagina;
-  // Este es el sub-arreglo de máximo 12 flores que se pintará en la pantalla actual
   const productosPaginaActual = productosFiltrados.slice(indicePrimerProducto, indiceUltimoProducto);
   const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
 
@@ -365,24 +326,14 @@ const handleActualizarProducto = async (e) => {
     }
   };
 
-  // --- RENDERIZADO CONDICIONAL DE LOGIN ---
+  // --- 🔥 DELEGACIÓN DEL CONTROL DE ACCESO AL NUEVO COMPONENTE independiEnte ---
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
-        <div className="absolute inset-0 z-0" style={{ backgroundImage: `url(${fondoJardin})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-        <form className="relative z-10 bg-white/90 backdrop-blur-sm p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center" onSubmit={handleLogin}>
-          <div className="flex justify-center mb-4 text-6xl select-none">🌸</div>
-          <h2 className="text-4xl font-black text-[#1b4332] mb-2 uppercase tracking-tighter">Floristería</h2>
-          <p className="text-xs font-bold text-gray-500 mb-8 tracking-wide">¡El jardín de tus sueños está a un paso!</p>
-          <div className="space-y-4">
-            <input type="email" name="email" placeholder="Correo electrónico" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
-            <input type="password" name="password" placeholder="Contraseña" required className="w-full p-4 rounded-2xl bg-white border border-gray-100 outline-none focus:ring-2 ring-pink-200 font-semibold" />
-            <button disabled={loading} className="w-full bg-[#d81b60] text-white p-5 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-[#ad1457] mt-4 disabled:bg-gray-400">
-              {loading ? 'Entrando...' : 'Entrar al Jardín'}
-            </button>
-          </div>
-        </form>
-      </div>
+      <Login 
+        setUser={setUser} 
+        API_BASE_URL={API_BASE_URL} 
+        fondoJardin={fondoJardin} 
+      />
     );
   }
 
@@ -545,7 +496,6 @@ const handleActualizarProducto = async (e) => {
                   className="p-3 px-5 rounded-full bg-white border border-gray-200 text-sm font-medium outline-none focus:ring-2 ring-emerald-200 w-full md:w-64 shadow-xs"
                 />
 
-                {/* 🌟 BOTÓN PARA IMPORTAR ARCHIVO EXCEL */}
                 <label className={`cursor-pointer font-black text-xs uppercase tracking-widest p-4 px-6 rounded-full shadow-lg flex-shrink-0 text-white transition-all ${cargandoExcel ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                   {cargandoExcel ? '🚀 Inyectando...' : '📤 Importar Excel'}
                   <input 
@@ -563,7 +513,6 @@ const handleActualizarProducto = async (e) => {
               </div>
             </div>
 
-            {/* CONTENEDOR GRID DE PRODUCTOS EN BLOQUES DE 12 */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
               <div className="lg:col-span-3 flex flex-col justify-between">
@@ -572,7 +521,6 @@ const handleActualizarProducto = async (e) => {
                     let badgeColor = 'bg-emerald-500';
                     let badgeText = 'Disponible';
                     
-                    // LÓGICA DE ALERTA DE STOCK EN FRONTEND (VINCULADO AL RF-04)
                     if (prod.stock === 0) { 
                       badgeColor = 'bg-gray-400'; 
                       badgeText = 'Agotado'; 
@@ -644,7 +592,6 @@ const handleActualizarProducto = async (e) => {
                   )}
                 </div>
 
-                {/* 🎛️ CONTROLES VISUALES DE PAGINACIÓN (ESTILO ESMERALDA) */}
                 {totalPaginas > 1 && (
                   <div className="flex justify-center items-center gap-2 py-4 bg-white rounded-full border border-gray-100 shadow-xs px-6">
                     <button 

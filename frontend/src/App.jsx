@@ -9,6 +9,8 @@ import Pedidos from './components/Pedidos';
 import Categorias from './components/categorias';
 import Proveedores from './components/proveedores'; 
 import Login from './components/Login'; // 👈 Importación del nuevo componente
+import TiendaCliente from './components/TiendaCliente'; 
+
 
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
@@ -334,15 +336,14 @@ const handleActualizarProducto = async (e) => {
     }
   };
 
-  // --- 🔥 DELEGACIÓN DEL CONTROL DE ACCESO AL NUEVO COMPONENTE independiEnte ---
+// 1. SI NO HAY USUARIO: Muestra Login / Registro / Recuperación
   if (!user) {
-    return (
-      <Login 
-        setUser={setUser} 
-        API_BASE_URL={API_BASE_URL} 
-        fondoJardin={fondoJardin} 
-      />
-    );
+    return <Login setUser={setUser} API_BASE_URL={API_BASE_URL} fondoJardin={fondoJardin} />;
+  }
+
+  // 2. SI ES UN CLIENTE: Lo manda a su archivo independiente de la tienda
+  if (user.rol === 'cliente') {
+    return <TiendaCliente user={user} setUser={setUser} productos={productos} />;
   }
 
   // --- RENDERIZADO PANEL DE CONTROL ---

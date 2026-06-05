@@ -11,7 +11,6 @@ import Proveedores from './components/proveedores';
 import Login from './components/Login'; // 👈 Importación del nuevo componente
 import TiendaCliente from './components/TiendaCliente'; 
 
-
 const API_BASE_URL = 'https://floristeria-api-v2.onrender.com/api';
 
 const formatCOP = (val) => new Intl.NumberFormat('es-CO', { 
@@ -22,10 +21,10 @@ const formatCOP = (val) => new Intl.NumberFormat('es-CO', {
 
 export default function App() {
   const [user, setUser] = useState(() => 
-  JSON.parse(window.sessionStorage.getItem('user')) || 
-  JSON.parse(window.localStorage.getItem('user')) || 
-  null
-);
+    JSON.parse(window.sessionStorage.getItem('user')) || 
+    JSON.parse(window.localStorage.getItem('user')) || 
+    null
+  );
   const [activeTab, setActiveTab] = useState('inicio'); 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showModal, setShowModal] = useState(false); 
@@ -93,16 +92,34 @@ export default function App() {
       const resStats = await fetch(`${API_BASE_URL}/stats?t=${new Date().getTime()}`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
       });
+      
+      let dataStats = { inventario: 0, personal: 0, pedidosCount: 0, ventasTotal: 0, pedidosLista: [] };
+
       if (resStats.ok) {
         const data = await resStats.json();
-        setStats({
+        dataStats = {
           inventario: data.inventario || 0,
           personal: data.personal || 0,
           pedidosCount: data.pedidosCount || 0,
           ventasTotal: data.ventasTotal || 0,
           pedidosLista: Array.isArray(data.pedidosLista) ? data.pedidosLista : []
-        });
+        };
       }
+
+      // Solicitamos la lista de personal filtrada para corregir el conteo en tiempo real
+      const resPers = await fetch(`${API_BASE_URL}/usuarios/personal`, {
+        headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
+      });
+      
+      if (resPers.ok) {
+        const listaEmpleados = await resPers.json();
+        if (Array.isArray(listaEmpleados)) {
+          // Filtramos para que la tarjeta de Personal no sume clientes
+          dataStats.personal = listaEmpleados.filter(u => u.rol !== 'cliente').length;
+        }
+      }
+
+      setStats(dataStats);
 
       const resProd = await fetch(`${API_BASE_URL}/flores`, {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' }
@@ -200,7 +217,7 @@ export default function App() {
     }
   };
 
-const handleActualizarProducto = async (e) => {
+  const handleActualizarProducto = async (e) => {
     e.preventDefault();
     if (!productoEditando) return;
 
@@ -245,7 +262,6 @@ const handleActualizarProducto = async (e) => {
         alert('¡Flor actualizada correctamente en la base de datos!');
         fetchData();
       } else {
-        // Corrección del bloque de error para evitar mutaciones accidentales
         try {
           const errorData = await res.json();
           alert(`Error al guardar cambios: ${errorData.error || errorData.mensaje || 'Verifica el backend.'}`);
@@ -258,6 +274,7 @@ const handleActualizarProducto = async (e) => {
       alert('Error de conexión con el servidor de Render.');
     }
   };
+
   const obtenerAlertasFrescura = () => {
     const alertas = [];
     const hoy = new Date();
@@ -336,7 +353,7 @@ const handleActualizarProducto = async (e) => {
     }
   };
 
-// 1. SI NO HAY USUARIO: Muestra Login / Registro / Recuperación
+  // 1. SI NO HAY USUARIO: Muestra Login / Registro / Recuperación
   if (!user) {
     return <Login setUser={setUser} API_BASE_URL={API_BASE_URL} fondoJardin={fondoJardin} />;
   }
@@ -346,7 +363,7 @@ const handleActualizarProducto = async (e) => {
     return <TiendaCliente user={user} setUser={setUser} productos={productos} />;
   }
 
-  // --- RENDERIZADO PANEL DE CONTROL ---
+  // 3. SI ES ADMIN: Renderiza tu panel original
   return (
     <div className="min-h-screen bg-[#eef3f7] flex flex-col md:flex-row font-sans relative overflow-x-hidden">
       
@@ -408,7 +425,7 @@ const handleActualizarProducto = async (e) => {
         </div>
       </aside>
 
-      <main className="contenido-principal flex-1 p-6 md:p-10 overflow-y-auto w-full">
+      <main className="contenido-principal flex-1 p-6 md:p-10 overflow-y-auto w-full text-gray-800">
         
         {activeTab === 'inicio' && (
           <div>
@@ -486,7 +503,7 @@ const handleActualizarProducto = async (e) => {
                   
                   {categoriasBD.map((cat) => (
                     <button 
-                      key={cat.id} 
+                      key={cat.id || cat._id} 
                       onClick={() => { setFiltroCategoria(cat.nombre); setPaginaActual(1); }}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filtroCategoria.toLowerCase() === cat.nombre.toLowerCase() ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                     >
@@ -682,7 +699,7 @@ const handleActualizarProducto = async (e) => {
                 />
                 <datalist id="categorias-sugeridas-bd">
                   {categoriasBD.map((cat) => (
-                    <option key={cat.id} value={cat.nombre} />
+                    <option key={cat.id || cat._id} value={cat.nombre} />
                   ))}
                 </datalist>
               </div>
